@@ -262,8 +262,9 @@
   <div id="rs3" style="display:none;">
     <div class="card">
       <h2 style="font-size:15px;font-weight:700;margin-bottom:8px;">📊 カテゴリ別のコア配分</h2>
-      <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.7;">省略可。設定するとドロップ率の判定や弱点分析が有効になります。</p>
+      <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.7;">各カテゴリの予算の合計が、月の変動費とピッタリ一致するように振り分けてください。</p>
       <div id="catlimits"></div>
+      <div id="catTotalCalc" style="font-size:13px; font-weight:bold; text-align:center; margin-top:16px; margin-bottom:8px;"></div>
     </div>
     <div class="ebox" id="re3" style="display:none;"></div>
     <div class="flex g8" style="margin-bottom:40px;">
@@ -388,9 +389,6 @@
     <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">対象ログ（任意メモ）</label>
     <input class="inp" type="text" id="eMemo" placeholder="例：コンビニランチモンスター" maxlength="50" style="margin-bottom:16px;">
 
-    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">日付</label>
-    <input class="inp" type="date" id="eDate" style="margin-bottom:16px;">
-
     <div id="ePrev" style="display:none;background:rgba(224,68,68,.1);border:1px solid rgba(224,68,68,.3);border-radius:12px;padding:14px;flex-direction:row;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <div id="ePrevCat" class="flex g8" style="align-items:center;"></div>
       <span id="ePrevAmt" style="font-family:var(--font-g);font-size:12px;color:var(--red);"></span>
@@ -469,11 +467,6 @@
       <div class="sc"><div class="slbl">1回平均</div><div class="sval" id="hiAvg" style="font-size:16px;"></div></div>
       <div class="sc"><div class="slbl">最大消費</div><div class="sval" id="hiMax" style="font-size:16px;color:var(--red);"></div></div>
     </div>
-  </div>
-
-  <div class="card mb16" id="hiWeekCard" style="display:none;">
-    <p class="stitle">週別推移</p>
-    <div id="hiWeekBars"></div>
   </div>
 
   <div class="card mb16" id="hiCatCard" style="display:none;">
@@ -781,13 +774,36 @@ function toS3(){
       <span style="font-size:22px;flex-shrink:0;">${cat.icon}</span>
       <span style="font-size:13px;font-weight:700;flex:1;">${cat.name}</span>
       <div style="position:relative;width:120px;">
-        <input class="inp" type="number" id="cl_${cat.id}" placeholder="0" min="0" inputmode="numeric"
-          value="${cat.limit||''}" style="padding:8px 28px 8px 10px;font-size:14px;">
+        <input class="inp cat-inp" type="number" id="cl_${cat.id}" placeholder="0" min="0" inputmode="numeric"
+          value="" oninput="updCatTotal()" style="padding:8px 28px 8px 10px;font-size:14px;">
         <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--txt3);">円</span>
       </div>
     </div>`;
   });
   setStep(3);
+  updCatTotal();
+}
+
+function updCatTotal() {
+  const bv=parseInt(el('rbudget').value,10)||0;
+  let total = 0;
+  document.querySelectorAll('.cat-inp').forEach(inp => {
+    total += parseInt(inp.value,10)||0;
+  });
+  const diff = bv - total;
+  const tc = el('catTotalCalc');
+  if(tc) {
+    if(diff === 0) {
+      tc.innerHTML = `<span style="color:var(--green)">✓ 予算ピッタリです！</span>`;
+      el('startBtn').disabled = false;
+    } else if(diff > 0) {
+      tc.innerHTML = `<span style="color:var(--yellow)">残り振り分け可能: ${Y(diff)}</span>`;
+      el('startBtn').disabled = true;
+    } else {
+      tc.innerHTML = `<span style="color:var(--red)">予算を ${Y(Math.abs(diff))} オーバーしています</span>`;
+      el('startBtn').disabled = true;
+    }
+  }
 }
 
 function updBudgetPrev(){
@@ -801,11 +817,19 @@ function startGame(){
   const nm=(el('rname').value||'').trim()||'サバイバー';
   const bv=parseInt(el('rbudget').value,10)||0;
   if(bv<1000){showErr('re3','予算を正しく入力してください');return;}
+  
+  let totalAllocated = 0;
   const cats=rCats.map(cat=>{
     const inp=el('cl_'+cat.id);
     const lim=inp?parseInt(inp.value,10)||0:0;
-    return{...cat,limit:lim||Math.floor(bv/5)};
+    totalAllocated += lim;
+    return{...cat,limit:lim};
   });
+  
+  if(totalAllocated !== bv) {
+    showErr('re3', `カテゴリ予算の合計が月の変動費と一致しません！`);
+    return;
+  }
   const character={name:nm,avatar:rAvatar,monthlyBudget:bv,categories:cats};
   const now=new Date();
   const state={
@@ -915,11 +939,6 @@ function initExp(){
       <div class="catic">${cat.icon}</div><div class="catnm">${cat.name}</div>
     </div>`).join('');
   el('eAmt').value=''; el('eMemo').value='';
-  const today = new Date();
-  const y = today.getFullYear();
-  const m = String(today.getMonth() + 1).padStart(2, '0');
-  const d = String(today.getDate()).padStart(2, '0');
-  el('eDate').value = `${y}-${m}-${d}`;
   el('ePrev').style.display='none'; el('eErr').style.display='none';
   el('eSubBtn').disabled=false;
 }
@@ -951,12 +970,7 @@ function submitExp(){
   ee.style.display='none';
   const btn=el('eSubBtn');btn.disabled=true;
   
-  let now = new Date().toISOString();
-  const eDateVal = el('eDate').value;
-  if(eDateVal) {
-    const [yy, mm, dd] = eDateVal.split('-');
-    now = new Date(yy, mm-1, dd, 12, 0, 0).toISOString();
-  }
+  const now = new Date().toISOString();
   const memo=(el('eMemo').value||'').trim();
   
   // Weekly Budget Check for Drop logic
@@ -1099,48 +1113,6 @@ function renderHist(){
   el('hiMax').textContent=expenses.length>0?Y(Math.max(...expenses.map(e=>e.amount))):'—';
 
   const totals={};expenses.forEach(e=>{totals[e.categoryId]=(totals[e.categoryId]||0)+e.amount;});
-
-  // Weekly Aggregation
-  const weekTotals = {};
-  const weekCats = {};
-  expenses.forEach(e => {
-    const wk = getWeekStr(e.date);
-    weekTotals[wk] = (weekTotals[wk] || 0) + e.amount;
-    if(!weekCats[wk]) weekCats[wk] = {};
-    weekCats[wk][e.categoryId] = (weekCats[wk][e.categoryId] || 0) + e.amount;
-  });
-
-  const wcc = el('hiWeekCard'), wbars = el('hiWeekBars');
-  const weekKeys = Object.keys(weekTotals).sort();
-  if(weekKeys.length > 0) {
-    wcc.style.display = 'block';
-    const wMaxV = Math.max(...Object.values(weekTotals), 1);
-    
-    wbars.innerHTML = weekKeys.map((wk, idx) => {
-      const amt = weekTotals[wk] || 0;
-      const bw = (amt / wMaxV * 100).toFixed(1);
-      
-      let stackHtml = '';
-      const wCatData = weekCats[wk];
-      const sortedCats = Object.keys(wCatData).sort((a,b) => wCatData[b] - wCatData[a]);
-      sortedCats.forEach(cid => {
-        const catAmt = wCatData[cid];
-        const catPct = (catAmt / amt * 100).toFixed(1);
-        const catDef = getCat(ch.categories, cid);
-        stackHtml += `<div style="width:${catPct}%; background:${catDef.color}; height:100%;"></div>`;
-      });
-      
-      return `<div class="cbrow" style="margin-bottom:8px;">
-        <div class="cblbl" style="width:40px;flex:none;text-align:right;">W${idx+1}</div>
-        <div class="cbtrk">
-          <div style="width:${bw}%; display:flex; height:100%; border-radius:4px; overflow:hidden;">${stackHtml}</div>
-        </div>
-        <div class="cbamt" style="width:50px;flex:none;text-align:right;">${Y(amt)}</div>
-      </div>`;
-    }).join('');
-  } else {
-    wcc.style.display = 'none';
-  }
   const maxV=Math.max(...Object.values(totals),1);
   const cc=el('hiCatCard'),bars=el('hiCatBars');
   if(Object.keys(totals).length>0){

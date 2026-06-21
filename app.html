@@ -262,8 +262,9 @@
   <div id="rs3" style="display:none;">
     <div class="card">
       <h2 style="font-size:15px;font-weight:700;margin-bottom:8px;">📊 カテゴリ別のコア配分</h2>
-      <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.7;">省略可。設定するとドロップ率の判定や弱点分析が有効になります。</p>
+      <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.7;">各カテゴリの予算の合計が、月の変動費とピッタリ一致するように振り分けてください。</p>
       <div id="catlimits"></div>
+      <div id="catTotalCalc" style="font-size:13px; font-weight:bold; text-align:center; margin-top:16px; margin-bottom:8px;"></div>
     </div>
     <div class="ebox" id="re3" style="display:none;"></div>
     <div class="flex g8" style="margin-bottom:40px;">
@@ -773,13 +774,36 @@ function toS3(){
       <span style="font-size:22px;flex-shrink:0;">${cat.icon}</span>
       <span style="font-size:13px;font-weight:700;flex:1;">${cat.name}</span>
       <div style="position:relative;width:120px;">
-        <input class="inp" type="number" id="cl_${cat.id}" placeholder="0" min="0" inputmode="numeric"
-          value="${cat.limit||''}" style="padding:8px 28px 8px 10px;font-size:14px;">
+        <input class="inp cat-inp" type="number" id="cl_${cat.id}" placeholder="0" min="0" inputmode="numeric"
+          value="" oninput="updCatTotal()" style="padding:8px 28px 8px 10px;font-size:14px;">
         <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--txt3);">円</span>
       </div>
     </div>`;
   });
   setStep(3);
+  updCatTotal();
+}
+
+function updCatTotal() {
+  const bv=parseInt(el('rbudget').value,10)||0;
+  let total = 0;
+  document.querySelectorAll('.cat-inp').forEach(inp => {
+    total += parseInt(inp.value,10)||0;
+  });
+  const diff = bv - total;
+  const tc = el('catTotalCalc');
+  if(tc) {
+    if(diff === 0) {
+      tc.innerHTML = `<span style="color:var(--green)">✓ 予算ピッタリです！</span>`;
+      el('startBtn').disabled = false;
+    } else if(diff > 0) {
+      tc.innerHTML = `<span style="color:var(--yellow)">残り振り分け可能: ${Y(diff)}</span>`;
+      el('startBtn').disabled = true;
+    } else {
+      tc.innerHTML = `<span style="color:var(--red)">予算を ${Y(Math.abs(diff))} オーバーしています</span>`;
+      el('startBtn').disabled = true;
+    }
+  }
 }
 
 function updBudgetPrev(){
@@ -793,11 +817,19 @@ function startGame(){
   const nm=(el('rname').value||'').trim()||'サバイバー';
   const bv=parseInt(el('rbudget').value,10)||0;
   if(bv<1000){showErr('re3','予算を正しく入力してください');return;}
+  
+  let totalAllocated = 0;
   const cats=rCats.map(cat=>{
     const inp=el('cl_'+cat.id);
     const lim=inp?parseInt(inp.value,10)||0:0;
-    return{...cat,limit:lim||Math.floor(bv/5)};
+    totalAllocated += lim;
+    return{...cat,limit:lim};
   });
+  
+  if(totalAllocated !== bv) {
+    showErr('re3', `カテゴリ予算の合計が月の変動費と一致しません！`);
+    return;
+  }
   const character={name:nm,avatar:rAvatar,monthlyBudget:bv,categories:cats};
   const now=new Date();
   const state={
