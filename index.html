@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#0d0d0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>今月あといくら使える？ - ざっくり家計簿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:     #0d0d0f; --panel: #15151a; --card: #1c1c24; --card2: #22222e;
+      --border: #2a2a38; --brite: #3a3a50;
+      --txt:    #e8e8f0; --txt2:  #8888aa; --txt3:  #555570;
+      --green:  #3ecf8e; --yellow:#f5c542; --red:   #e04444; --gold:  #ffd700;
+      --font-g: 'Press Start 2P', monospace;
+      --font-u: 'Noto Sans JP', sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{background:var(--bg);color:var(--txt);font-family:var(--font-u);
+      min-height:100vh;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-thumb{background:var(--brite);border-radius:2px;}
+
+    /* ── SCREENS ── */
+    .scr{display:none;max-width:480px;margin:0 auto;padding:20px 16px 100px;min-height:100vh;}
+    .scr.on{display:block;}
+
+    /* ── CARD ── */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px;margin-bottom:14px;}
+
+    /* ── BUTTONS ── */
+    .btn{display:flex;align-items:center;justify-content:center;gap:8px;
+      padding:15px 20px;border:none;border-radius:12px;font-family:var(--font-u);
+      font-size:15px;font-weight:700;cursor:pointer;width:100%;
+      touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+      transition:transform .1s,opacity .2s;}
+    .btn:active{transform:scale(.97);opacity:.85;}
+    .btn-g{background:linear-gradient(135deg,#3ecf8e,#2aaa70);color:#0d1a10;box-shadow:0 0 20px rgba(62,207,142,.25);}
+    .btn-r{background:linear-gradient(135deg,#e04444,#b02222);color:#fff;box-shadow:0 0 20px rgba(224,68,68,.25);}
+    .btn-s{background:var(--card);color:var(--txt);border:1px solid var(--brite);}
+    .btn:disabled{opacity:.5;pointer-events:none;}
+
+    /* ── INPUT ── */
+    .inp{width:100%;background:#0d0d14;border:1.5px solid var(--brite);border-radius:12px;
+      color:var(--txt);font-family:var(--font-u);font-size:16px;padding:14px 16px;
+      outline:none;transition:border-color .2s,box-shadow .2s;}
+    .inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(62,207,142,.15);}
+    .inp::placeholder{color:var(--txt3);}
+
+    /* ── GAME TITLE ── */
+    .gtitle{font-family:var(--font-g);font-size:10px;letter-spacing:2px;color:var(--green);
+      text-shadow:0 0 10px rgba(62,207,142,.5);}
+
+    /* ── HP BAR (CORE) ── */
+    .hpwrap{position:relative;width:100%;height:28px;background:#0a0a10;
+      border:2px solid var(--brite);border-radius:5px;overflow:hidden;}
+    .hpfill{height:100%;border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1),background .4s;position:relative;}
+    .hpfill::after{content:'';position:absolute;top:4px;left:8px;right:8px;height:4px;
+      background:rgba(255,255,255,.18);border-radius:2px;}
+    .hptxt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      font-family:var(--font-g);font-size:8px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);}
+
+    /* ── STATS GRID ── */
+    .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+    .sc{background:var(--card);border:1px solid var(--border);border-radius:12px;
+      padding:16px;text-align:center;}
+    .slbl{font-size:10px;color:var(--txt2);margin-bottom:6px;text-transform:uppercase;font-weight:700;}
+    .sval{font-size:20px;font-weight:700;}
+
+    /* ── STEP BARS ── */
+    .sbars{display:flex;gap:8px;margin-bottom:32px;}
+    .sbar{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s,box-shadow .3s;}
+    .sbar.on{background:var(--green);box-shadow:0 0 8px rgba(62,207,142,.5);}
+
+    /* ── AVATAR GRID ── */
+    .avgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+    .avc{display:flex;flex-direction:column;align-items:center;gap:6px;
+      padding:16px 8px;background:var(--card);border:2px solid var(--border);
+      border-radius:12px;cursor:pointer;touch-action:manipulation;}
+    .avc.sel{border-color:var(--green);background:rgba(62,207,142,.1);}
+    .avem{font-size:36px;}
+    .avnm{font-size:10px;font-weight:700;color:var(--txt2);}
+
+    /* ── CATEGORY GRID ── */
+    .cgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+    .catc{display:flex;flex-direction:column;align-items:center;gap:4px;
+      padding:12px 8px;background:var(--card);border:2px solid var(--border);
+      border-radius:12px;cursor:pointer;touch-action:manipulation;
+      transition:border-color .2s,background .2s;}
+    .catc.sel{border-color:var(--green);background:rgba(62,207,142,.1);}
+    .catic{font-size:28px;} .catnm{font-size:10px;font-weight:700;color:var(--txt2);}
+
+    /* ── EXPENSE ITEM ── */
+    .eitem{display:flex;align-items:center;gap:12px;padding:14px;
+      background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;}
+    .eic{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;
+      justify-content:center;font-size:20px;flex-shrink:0;}
+    .einf{flex:1;min-width:0;}
+    .ememo{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .emeta{font-size:11px;color:var(--txt2);margin-top:2px;}
+    .eamt{font-size:15px;font-weight:700;color:var(--red);white-space:nowrap;}
+
+    /* ── ERROR BOX ── */
+    .ebox{background:rgba(224,68,68,.15);border:1px solid rgba(224,68,68,.4);
+      border-radius:12px;padding:12px 16px;margin-bottom:12px;
+      color:var(--red);font-size:14px;font-weight:700;}
+
+    /* ── CHARACTER DISPLAY ── */
+    .chdisp{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;}
+    .chem{font-size:64px;line-height:1;}
+    .chbadge{padding:3px 10px;border-radius:99px;font-size:9px;font-family:var(--font-g);}
+
+    /* ── BOTTOM NAV ── */
+    .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+      width:100%;max-width:480px;background:rgba(21,21,26,.97);
+      backdrop-filter:blur(16px);border-top:1px solid var(--border);
+      display:flex;align-items:center;padding:8px 0;z-index:100;}
+    .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+      padding:8px;cursor:pointer;color:var(--txt3);background:none;border:none;
+      font-family:var(--font-g);touch-action:manipulation;}
+    .ni.on,.ni:active{color:var(--green);}
+    .niic{font-size:22px;} .nilb{font-size:8px;}
+
+    /* ── CAT BAR (History) ── */
+    .cbrow{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+    .cblbl{width:58px;font-size:11px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+    .cbtrk{flex:1;height:12px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden;}
+    .cbfil{height:100%;border-radius:6px;transition:width .6s;}
+    .cbamt{width:68px;text-align:right;font-size:11px;font-weight:700;flex-shrink:0;}
+
+    /* ── SECTION TITLE ── */
+    .stitle{font-size:11px;font-weight:700;color:var(--txt2);letter-spacing:1px;
+      text-transform:uppercase;margin-bottom:12px;}
+
+    /* ── ANIMATIONS ── */
+    @keyframes fldmg{0%{background:rgba(62,207,142,0);}20%{background:rgba(62,207,142,.3);}100%{background:rgba(62,207,142,0);}}
+    @keyframes fllore{0%{background:rgba(255,215,0,0);}20%{background:rgba(255,215,0,.3);}100%{background:rgba(255,215,0,0);}}
+    @keyframes fltdmg{0%{opacity:1;transform:translateY(0) scale(1);}60%{opacity:1;transform:translateY(-60px) scale(1.3);}100%{opacity:0;transform:translateY(-100px) scale(.8);}}
+    @keyframes shk{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+    @keyframes flt{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+    @keyframes pls{0%,100%{opacity:.7;}50%{opacity:1;}}
+    @keyframes slin{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+    .anim-flt{animation:flt 3s ease-in-out infinite;}
+    .anim-pls{animation:pls 1s ease-in-out infinite;}
+    .anim-slin{animation:slin .35s ease-out;}
+
+    /* ── OVERLAYS ── */
+    #dmgOvl{position:fixed;inset:0;pointer-events:none;z-index:999;}
+    #dmgOvl.flash{animation:fldmg .6s ease-out forwards;}
+    #dmgOvl.lore{animation:fllore .8s ease-out forwards;}
+    
+    #dmgNum{position:fixed;top:38%;left:50%;transform:translateX(-50%);
+      font-family:var(--font-u);font-weight:700;font-size:20px;color:var(--green);
+      text-shadow:0 0 20px rgba(62,207,142,.8),2px 2px 0 #000;
+      pointer-events:none;z-index:1000;white-space:nowrap;display:none;
+      animation:fltdmg 1s ease-out forwards;}
+    #dmgNum.loretext{color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.8),2px 2px 0 #000;}
+
+    /* ── CHIP GRID ── */
+    .chip-item{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border .2s;}
+    .chip-item.unlocked{border-color:var(--gold);color:var(--gold);}
+    .chip-item.locked{opacity:0.5;pointer-events:none;color:var(--txt3);}
+    .chip-icon{font-size:24px;margin-bottom:4px;}
+    .chip-name{font-size:10px;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+
+    /* ── MISC ── */
+    .flex{display:flex;} .fbet{display:flex;justify-content:space-between;align-items:center;}
+    .fcol{display:flex;flex-direction:column;} .g8{gap:8px;} .g12{gap:12px;}
+    .mb8{margin-bottom:8px;} .mb16{margin-bottom:16px;} .mb24{margin-bottom:24px;}
+    .tcen{text-align:center;}
+  </style>
+</head>
+<body>
+
+<div id="dmgOvl"></div>
+<div id="dmgNum"></div>
+
+<!-- ═══════════════ SPLASH ═══════════════ -->
+<div class="scr on" id="scr-splash">
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+    <div style="font-size:56px;">⚔️</div>
+    <p class="gtitle">今月あといくら使える？</p>
+    <p style="font-size:12px;color:var(--txt3);">Loading...</p>
+  </div>
+</div>
+
+<!-- ═══════════════ MONOLOGUE ═══════════════ -->
+<div class="scr" id="scr-mono" style="padding:0; margin:0; max-width:100%;">
+  <div style="min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+    <div style="max-width:480px; width:100%; padding:40px 24px;">
+      <div id="monoText" style="font-size:14px;line-height:2.0;letter-spacing:1px;color:var(--txt);margin-bottom:60px;min-height:300px;"></div>
+      <button class="btn btn-g" onclick="go('register')" id="monoBtn" style="opacity:0;transition:opacity 1s;">目を覚ます →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ REGISTER ═══════════════ -->
+<div class="scr" id="scr-register">
+  <div class="tcen mb24" style="padding-top:16px;">
+    <p class="gtitle">今月あといくら使える？</p>
+    <h1 style="font-size:20px;font-weight:700;margin-top:12px;">キャラクター作成</h1>
+    <p style="font-size:13px;color:var(--txt2);margin-top:6px;">あなたのサバイバーを設定してください</p>
+  </div>
+
+  <div class="sbars">
+    <div class="sbar on" id="sb1"></div>
+    <div class="sbar" id="sb2"></div>
+    <div class="sbar" id="sb3"></div>
+  </div>
+
+  <!-- Step 1 -->
+  <div id="rs1" class="anim-slin">
+    <div class="card">
+      <h2 style="font-size:15px;font-weight:700;margin-bottom:20px;">👤 サバイバーを選ぶ</h2>
+      <div class="avgrid">
+        <div class="avc sel" id="av-survivor_a" onclick="pickAv('survivor_a')"><div class="avem">🧑‍🦱</div><div class="avnm">ハルト</div></div>
+        <div class="avc"     id="av-survivor_b" onclick="pickAv('survivor_b')"><div class="avem">👩‍🦰</div><div class="avnm">アカリ</div></div>
+        <div class="avc"     id="av-survivor_c" onclick="pickAv('survivor_c')"><div class="avem">🧔</div><div class="avnm">ケンジ</div></div>
+      </div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">
+        呼び名（ニックネーム）<span style="color:var(--red)">※必須</span>
+      </label>
+      <input class="inp" type="text" id="rname" placeholder="例：ハルト、生存者A" maxlength="16">
+    </div>
+    <div class="ebox" id="re1" style="display:none;"></div>
+    <button class="btn btn-g" onclick="toS2()" style="margin-bottom:40px;">次へ →</button>
+  </div>
+
+  <!-- Step 2 -->
+  <div id="rs2" style="display:none;">
+    <div class="card">
+      <h2 style="font-size:15px;font-weight:700;margin-bottom:8px;">🔋 最大コア容量（月の予算）を設定</h2>
+      <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.7;">
+        月の変動費予算を入力してください。<br>
+        これがあなたのエネルギーになります。0になると<span style="color:var(--red);font-weight:700;">コア停止（ゲームオーバー）</span>です。
+      </p>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">
+        月の変動費予算（円）<span style="color:var(--red)">※必須</span>
+      </label>
+      <div style="position:relative;">
+        <input class="inp" type="number" id="rbudget" placeholder="50000" min="1000" inputmode="numeric"
+          oninput="updBudgetPrev()" style="padding-right:32px;">
+        <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--txt2);font-size:14px;">円</span>
+      </div>
+      <div id="bprev" style="display:none;margin-top:12px;background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:12px;padding:14px;">
+        <div class="fbet mb8"><span style="font-size:12px;color:var(--txt2);">コア容量</span><span style="font-family:var(--font-g);font-size:14px;color:var(--green);" id="bphp"></span></div>
+        <div class="fbet"><span style="font-size:12px;color:var(--txt2);">1日あたり</span><span style="font-size:14px;font-weight:700;color:var(--yellow);" id="bpday"></span></div>
+      </div>
+    </div>
+    <div class="ebox" id="re2" style="display:none;"></div>
+    <div class="flex g8" style="margin-bottom:40px;">
+      <button class="btn btn-s" onclick="toS1()" style="flex:1;">← 戻る</button>
+      <button class="btn btn-g" onclick="toS3()" style="flex:2;">次へ →</button>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div id="rs3" style="display:none;">
+    <div class="card">
+      <h2 style="font-size:15px;font-weight:700;margin-bottom:8px;">📊 カテゴリ別のコア配分</h2>
+      <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.7;">省略可。設定するとドロップ率の判定や弱点分析が有効になります。</p>
+      <div id="catlimits"></div>
+    </div>
+    <div class="ebox" id="re3" style="display:none;"></div>
+    <div class="flex g8" style="margin-bottom:40px;">
+      <button class="btn btn-s" onclick="toS2()" style="flex:1;">← 戻る</button>
+      <button class="btn btn-g" onclick="startGame()" style="flex:2;" id="startBtn">🗡️ サバイバル開始！</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MONTH END ═══════════════ -->
+<div class="scr" id="scr-mend">
+  <div class="tcen mb24" style="padding-top:32px;">
+    <div style="font-size:48px;margin-bottom:8px;">🏆</div>
+    <h1 style="font-size:20px;font-weight:700;">月間サバイバル完了</h1>
+    <p style="font-size:12px;color:var(--txt2);margin-top:6px;">1ヶ月のミッションを生き延びました</p>
+  </div>
+  
+  <div class="card mb24 tcen">
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:12px;">獲得した開拓資材（残りエネルギーの10%）</p>
+    <div style="font-family:var(--font-g);font-size:32px;color:var(--green);text-shadow:0 0 15px rgba(62,207,142,0.5);" id="meMats"></div>
+    <p style="font-size:12px;color:var(--txt2);margin-top:12px;">これで部屋を片付け（アップグレード）しましょう！</p>
+  </div>
+  
+  <button class="btn btn-g" onclick="ackMonthEnd()" style="font-size:16px;padding:16px;">次の月へ進む →</button>
+</div>
+
+<!-- ═══════════════ CHECKPOINT ═══════════════ -->
+<div class="scr" id="scr-cp">
+  <div class="tcen mb24" style="padding-top:32px;">
+    <div style="font-size:48px;margin-bottom:8px;">⛺</div>
+    <h1 style="font-size:20px;font-weight:700;">週次チェックポイント</h1>
+    <p style="font-size:12px;color:var(--txt2);margin-top:6px;">先週の戦闘結果報告です</p>
+  </div>
+  
+  <div class="card mb24 tcen">
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:12px;">先週の消費エネルギー</p>
+    <div style="font-family:var(--font-g);font-size:32px;color:var(--red);text-shadow:0 0 15px rgba(224,68,68,0.5);" id="cpDmg"></div>
+    <p id="cpEval" style="font-size:14px;font-weight:700;margin-top:16px;"></p>
+  </div>
+  
+  <button class="btn btn-g" id="cpBtn" style="font-size:16px;padding:16px;">確認して進む →</button>
+</div>
+
+<!-- ═══════════════ HOME ═══════════════ -->
+<div class="scr" id="scr-home">
+  <div class="fbet mb24">
+    <p class="gtitle">今月あといくら使える？</p>
+    <div class="flex g8" style="align-items:center;">
+      <span id="hAvEm" style="font-size:20px;"></span>
+      <span id="hNm" style="font-size:13px;font-weight:700;"></span>
+    </div>
+  </div>
+
+  <div class="card mb16" id="hChCard" style="text-align:center; position:relative; overflow:hidden;">
+    <div class="chdisp" style="position:relative; z-index:1;">
+      <div class="chem anim-flt" id="hChEm"></div>
+      <span class="chbadge" id="hChBg"></span>
+    </div>
+    <div style="margin-top:16px;margin-bottom:8px;">
+      <div class="fbet mb8" style="font-size:11px;color:var(--txt2);">
+        <span style="font-family:var(--font-g);font-size:8px;">CORE</span>
+        <span id="hHpLbl" style="font-weight:700;"></span>
+      </div>
+      <div class="hpwrap"><div class="hpfill" id="hHpBar"></div><span class="hptxt" id="hHpPct"></span></div>
+    </div>
+    <p id="hStMsg" style="font-size:12px;color:var(--txt2);margin-top:8px;"></p>
+  </div>
+
+  <div class="sgrid">
+    <div class="sc"><div class="slbl">残りコア</div><div class="sval" id="hHpS"></div></div>
+    <div class="sc"><div class="slbl">残り日数</div><div class="sval" id="hDays" style="color:var(--yellow);"></div></div>
+    <div class="sc"><div class="slbl">今月の消費</div><div class="sval" id="hSpent" style="font-size:16px;color:var(--red);"></div></div>
+    <div class="sc"><div class="slbl">1日の許容量</div><div class="sval" id="hDaily" style="font-size:16px;"></div></div>
+  </div>
+
+  <div id="hDmgBtn" style="margin-bottom:14px;">
+    <button class="btn btn-r" onclick="go('expense')" style="font-size:16px;padding:16px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);box-shadow:0 0 20px rgba(62,207,142,.25);">🔫 脅威を撃退する（支出）</button>
+  </div>
+  <div id="hBanner" style="display:none;" class="card tcen mb16"></div>
+
+  <p class="stitle" id="hRecTtl" style="display:none;">直近の戦闘ログ</p>
+  <div id="hRecList"></div>
+  <div id="hEmpty" class="card tcen" style="padding:32px;display:none;">
+    <div style="font-size:40px;margin-bottom:8px;">🌄</div>
+    <p style="color:var(--txt2);">今月はまだ遭遇なし</p>
+    <p style="font-size:12px;color:var(--txt3);margin-top:4px;">このまま生き延びろ！</p>
+  </div>
+
+  <nav class="bnav">
+    <button class="ni on" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
+    <button class="ni" onclick="go('expense')" style="padding:0 8px;">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">🔫</div>
+    </button>
+    <button class="ni" onclick="go('base')"><span class="niic">🚪</span><span class="nilb">部屋</span></button>
+    <button class="ni" onclick="go('history')"><span class="niic">📊</span><span class="nilb">戦績</span></button>
+  </nav>
+</div>
+
+<!-- ═══════════════ EXPENSE ═══════════════ -->
+<div class="scr" id="scr-expense">
+  <div class="flex g12 mb24" style="align-items:center;">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--txt2);font-size:26px;cursor:pointer;padding:4px;touch-action:manipulation;">←</button>
+    <div>
+      <p class="gtitle" style="font-size:8px;">今月あといくら使える？</p>
+      <h1 style="font-size:18px;font-weight:700;margin-top:4px;">脅威を撃退する（支出）</h1>
+    </div>
+  </div>
+
+  <div class="card" style="border-color:rgba(62,207,142,.3);">
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.6;">⚠️ 支出を登録するとコアエネルギーを消費して脅威を撃退します。</p>
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">消費エネルギー（金額）</label>
+    <div style="position:relative;margin-bottom:20px;">
+      <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--txt2);">¥</span>
+      <input class="inp" type="number" id="eAmt" placeholder="0" min="1" inputmode="numeric"
+        oninput="updExpPrev()" style="padding-left:36px;font-size:24px;font-weight:700;">
+    </div>
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:8px;">脅威のカテゴリ</label>
+    <div class="cgrid" id="eCatGrid"></div>
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">対象ログ（任意メモ）</label>
+    <input class="inp" type="text" id="eMemo" placeholder="例：コンビニランチモンスター" maxlength="50" style="margin-bottom:16px;">
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">日付</label>
+    <input class="inp" type="date" id="eDate" style="margin-bottom:16px;">
+
+    <div id="ePrev" style="display:none;background:rgba(224,68,68,.1);border:1px solid rgba(224,68,68,.3);border-radius:12px;padding:14px;flex-direction:row;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div id="ePrevCat" class="flex g8" style="align-items:center;"></div>
+      <span id="ePrevAmt" style="font-family:var(--font-g);font-size:12px;color:var(--red);"></span>
+    </div>
+
+    <div class="ebox" id="eErr" style="display:none;"></div>
+    <button class="btn btn-g" onclick="submitExp()" id="eSubBtn" style="font-size:14px;">🔫 迎撃する（エネルギー消費確定）</button>
+  </div>
+</div>
+
+<!-- ═══════════════ BASE / ARCHIVES ═══════════════ -->
+<div class="scr" id="scr-base">
+  <div class="fbet mb24">
+    <p class="gtitle">MY ROOM</p>
+    <div class="flex g8" style="align-items:center;">
+      <span style="font-size:18px;">🧹</span>
+      <span id="bMat" style="font-size:14px;font-weight:700;color:var(--green);"></span>
+    </div>
+  </div>
+  
+  <div class="card tcen mb24" id="bMainCard" style="position:relative;overflow:hidden;">
+    <div style="position:absolute;inset:0;background:rgba(28,28,36,0.7);z-index:0;pointer-events:none;" id="bMainOvl"></div>
+    <div style="position:absolute;top:-20px;left:-20px;width:150%;height:150%;background:radial-gradient(circle, rgba(62,207,142,0.2) 0%, rgba(0,0,0,0) 60%);z-index:1;pointer-events:none;"></div>
+    <div style="position:relative;z-index:2;">
+      <div id="bIco" class="anim-flt" style="font-size:80px;margin-bottom:12px;text-shadow:0 10px 20px rgba(0,0,0,0.5);">🗑️</div>
+      <h2 id="bName" style="font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:1px;">散らかったジャンク部屋</h2>
+      <p id="bDesc" style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.6;">不要なモノとゴミに溢れた狭い部屋。</p>
+      
+      <div id="bUpBtnBox">
+        <button class="btn btn-g" id="bUpBtn" onclick="upgradeBase()">片付ける（アップグレード）</button>
+        <p id="bUpCost" style="font-size:11px;color:var(--txt3);margin-top:8px;"></p>
+      </div>
+      <p id="bMaxMsg" style="display:none;font-size:14px;color:var(--gold);font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.5);">MAX LEVEL REACHED</p>
+    </div>
+  </div>
+  
+  <div class="fbet mb12">
+    <p class="stitle" style="margin:0;">アーカイブ（旧世界の記録）</p>
+    <span id="bChipCnt" style="font-size:11px;color:var(--txt2);"></span>
+  </div>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※支出がカテゴリ別の週次予算内に収まっている場合、迎撃時にランダムでドロップします。</p>
+  <div class="cgrid" id="bChips" style="grid-template-columns:repeat(2,1fr);"></div>
+  
+  <div id="chipModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);z-index:2000;padding:24px;flex-direction:column;justify-content:center;align-items:center;">
+    <div class="card" style="width:100%;max-width:400px;border-color:var(--gold);box-shadow:0 0 30px rgba(255,215,0,0.15);">
+      <div style="font-size:32px;text-align:center;margin-bottom:8px;">💿</div>
+      <h3 id="cmTitle" style="font-size:14px;color:var(--gold);margin-bottom:16px;font-weight:700;text-align:center;border-bottom:1px solid rgba(255,215,0,0.3);padding-bottom:12px;"></h3>
+      <p id="cmText" style="font-size:13px;line-height:1.8;color:var(--txt);margin-bottom:24px;text-align:justify;"></p>
+      <button class="btn btn-s" onclick="document.getElementById('chipModal').style.display='none'">閉じる</button>
+    </div>
+  </div>
+
+  <nav class="bnav">
+    <button class="ni" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
+    <button class="ni" onclick="go('expense')" style="padding:0 8px;">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">🔫</div>
+    </button>
+    <button class="ni on" onclick="go('base')"><span class="niic">🚪</span><span class="nilb">部屋</span></button>
+    <button class="ni" onclick="go('history')"><span class="niic">📊</span><span class="nilb">戦績</span></button>
+  </nav>
+</div>
+
+<!-- ═══════════════ HISTORY ═══════════════ -->
+<div class="scr" id="scr-history">
+  <div style="margin-bottom:24px;">
+    <p class="gtitle">今月あといくら使える？</p>
+    <h1 style="font-size:20px;font-weight:700;margin-top:8px;">戦績・分析</h1>
+    <p style="font-size:12px;color:var(--txt2);margin-top:4px;" id="hiMonth"></p>
+  </div>
+
+  <div class="card mb16">
+    <p class="stitle">月間サマリー</p>
+    <div class="sgrid">
+      <div class="sc"><div class="slbl">総消費ｴﾈﾙｷﾞｰ</div><div class="sval" id="hiSpent" style="font-size:16px;color:var(--red);"></div></div>
+      <div class="sc"><div class="slbl">迎撃回数</div><div class="sval" id="hiCnt"></div></div>
+      <div class="sc"><div class="slbl">1回平均</div><div class="sval" id="hiAvg" style="font-size:16px;"></div></div>
+      <div class="sc"><div class="slbl">最大消費</div><div class="sval" id="hiMax" style="font-size:16px;color:var(--red);"></div></div>
+    </div>
+  </div>
+
+  <div class="card mb16" id="hiWeekCard" style="display:none;">
+    <p class="stitle">週別推移</p>
+    <div id="hiWeekBars"></div>
+  </div>
+
+  <div class="card mb16" id="hiCatCard" style="display:none;">
+    <p class="stitle">カテゴリ別消費</p>
+    <div id="hiCatBars"></div>
+  </div>
+
+  <p class="stitle">全戦闘履歴</p>
+  <button class="btn btn-s mb16" onclick="testAdvanceMonth()" style="font-size:11px;padding:8px;">🛠️ デバッグ：強制的に月末に進める</button>
+  <div id="hiList"></div>
+  <div id="hiEmpty" class="card tcen" style="padding:32px;display:none;">
+    <div style="font-size:40px;margin-bottom:8px;">📊</div>
+    <p style="color:var(--txt2);">まだ戦闘データがありません</p>
+  </div>
+
+  <nav class="bnav">
+    <button class="ni" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
+    <button class="ni" onclick="go('expense')" style="padding:0 8px;">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">🔫</div>
+    </button>
+    <button class="ni" onclick="go('base')"><span class="niic">🚪</span><span class="nilb">部屋</span></button>
+    <button class="ni on" onclick="go('history')"><span class="niic">📊</span><span class="nilb">戦績</span></button>
+  </nav>
+</div>
+
+<script>
+// ─── CONSTANTS ───────────────────────────────────────────────
+const SK = 'kakebo_quest_v1';
+const CATS = [
+  {id:'food',      name:'食費',         icon:'🥩', limit:0, color:'#e07b39'},
+  {id:'daily',     name:'日用品',       icon:'🧴', limit:0, color:'#3ecf8e'},
+  {id:'transport', name:'交通費',       icon:'🚃', limit:0, color:'#4a9eff'},
+  {id:'leisure',   name:'ﾚｼﾞｬｰ･娯楽',   icon:'🏕️', limit:0, color:'#b06de0'},
+  {id:'social',    name:'交際費',       icon:'🍻', limit:0, color:'#ff7eb3'},
+  {id:'medical',   name:'医療費',       icon:'💊', limit:0, color:'#ff4a4a'},
+  {id:'education', name:'教育費',       icon:'📚', limit:0, color:'#4db8ff'},
+  {id:'beauty',    name:'被服・美容',   icon:'✨', limit:0, color:'#ffb347'},
+  {id:'other',     name:'その他',       icon:'💡', limit:0, color:'#888888'},
+];
+const AVEM = {survivor_a:'🧑‍🦱', survivor_b:'👩‍🦰', survivor_c:'🧔'};
+const CSTATE = {
+  healthy: {em:'🧑‍🦱',lbl:'元気',  bc:'#3ecf8e',bg:'rgba(62,207,142,.15)', gl:'rgba(62,207,142,.4)'},
+  tired:   {em:'😓',   lbl:'疲労',  bc:'#f5c542',bg:'rgba(245,197,66,.15)', gl:'rgba(245,197,66,.3)'},
+  critical:{em:'😰',   lbl:'ピンチ',bc:'#e04444',bg:'rgba(224,68,68,.15)',  gl:'rgba(224,68,68,.4)'},
+  victory: {em:'🥳',   lbl:'クリア',bc:'#ffd700',bg:'rgba(255,215,0,.15)',  gl:'rgba(255,215,0,.4)'},
+  defeated:{em:'💀',   lbl:'敗北',  bc:'#555570',bg:'rgba(85,85,112,.15)',  gl:'rgba(85,85,112,.3)'},
+};
+
+const MONO_LINES = [
+  "ここは、文明が砂に埋もれた辺境の惑星。",
+  "あなたの命綱は、支給された「エネルギーコア（今月の予算）」ただ一つ。",
+  "次の補給船が来るのは30日後だ。",
+  "",
+  "この星では、日々様々な「脅威（出費）」があなたに襲い掛かるだろう。",
+  "生き延びるためには、コアのエネルギーを消費して、それらを撃退しなければならない。",
+  "",
+  "忘れるな。",
+  "最小の消費で脅威を退ける「効率（節約）」こそが、優れたサバイバーの証だ。",
+  "",
+  "迫り来る脅威を正確に記録し、撃ち抜け。",
+  "すべての戦闘（記録）は、あなたを確実に強くする。",
+  "",
+  "目を覚ませ、サバイバー。",
+  "あなたの生存戦略（クエスト）が、今始まる──。"
+];
+
+const DATA_CHIPS = [
+  // Lv 1
+  { id: 'c1', title: '自動販売ボットの残骸', text: '「コレガ欲シイノデショウ？買エ。今スグ」...壊れてなお、消費を強要してくる。不快なノイズだ。', minLevel: 1 },
+  { id: 'c2', title: '本部からの自動音声', text: '「移住権獲得テストヲ続行シテクダサイ」...支給物資だけで生き延びろという、無機質な命令。', minLevel: 1 },
+  { id: 'c3', title: '疑問の芽生え', text: '来る日も来る日もガラクタを片付ける。こんな事を続けて、本当に月に行ける日が来るのか？', minLevel: 1 },
+  // Lv 2
+  { id: 'c4', title: 'エラーログ', text: '何度本部へコンタクトを取っても、返ってくるのは規定の自動音声だけだ。', minLevel: 2 },
+  { id: 'c5', title: 'ある開拓者の手記', text: '「誰も助けには来ない。みんな砂に呑まれた。」絶望的な走り書きだ。', minLevel: 2 },
+  { id: 'c6', title: '孤独の闇', text: '本当は月の人類なんてとうに滅びているのではないか？ このテストはただの嘘なのではないか？', minLevel: 2 },
+  // Lv 3
+  { id: 'c7', title: '片付けの効能', text: '無駄を捨て、部屋を整えたら、少しだけ心が軽くなった気がする。', minLevel: 3 },
+  { id: 'c8', title: '小さな芽', text: '砂の中に生えた小さな緑。こんな星でも命は育つ。私も生きよう。', minLevel: 3 },
+  { id: 'c9', title: 'マインドフルネス', text: '月に行くためじゃない。今のこの静かな生活が、悪くないと思えてきた。', minLevel: 3 },
+  // Lv 4
+  { id: 'c10', title: '静寂の夜', text: '星空が美しい。過剰な消費のノイズがない世界は、こんなにも穏やかだ。', minLevel: 4 },
+  { id: 'c11', title: '自己の証明', text: 'もう誘惑には負けない。私には、本当に必要なものだけがあればいい。', minLevel: 4 },
+  // Lv 5
+  { id: 'c12', title: 'ノイズ越しの声', text: '『...こちらネオ・エデン。見事だ、特務隊員。』...幻聴じゃない、生きた人間の声だ！', minLevel: 5 },
+  { id: 'c13', title: '真の豊かさ', text: '「合格だ。君を月に迎えよう」...だが、この心地よい部屋を捨ててまで、誰かの敷いたレールに乗る必要はあるのか？', minLevel: 5 },
+  { id: 'c14', title: '破り捨てた切符', text: '私はこの星に残る。自らの手で築き上げたこの静かな生活こそが、私の探し求めていた幸福なのだ。', minLevel: 5 },
+  { id: 'c15', title: '新たな出会い', text: '砂漠で、誰かが生活している痕跡を見つけた。私と同じように合格通知を破り捨て、この星で共に丁寧に生きる仲間を。', minLevel: 5 }
+];
+
+const BASE_LEVELS = [
+  { level: 1, name: '散らかったジャンク部屋', desc: '不要なモノとゴミに溢れた狭い部屋。', cost: 0, icon: '🗑️' },
+  { level: 2, name: '片付いたシェルター', desc: 'ゴミがなくなり、少し生活しやすくなった。', cost: 1000, icon: '🛏️' },
+  { level: 3, name: '整理されたキャビン', desc: '必要なモノだけが整然と並ぶ機能的な空間。', cost: 3000, icon: '🛋️' },
+  { level: 4, name: 'ミニマルなエコルーム', desc: '無駄を削ぎ落とした美しく快適な暮らし。', cost: 8000, icon: '🪴' },
+  { level: 5, name: '緑豊かなペントハウス', desc: '心まで豊かになる、究極の「丁寧な暮らし」。', cost: 20000, icon: '✨' }
+];
+
+// ─── MUTABLE STATE ───────────────────────────────────────────
+let rAvatar='survivor_a', rCats=CATS.map(c=>({...c})), eCatId='food';
+let monoTimer=null;
+
+// ─── STORAGE ─────────────────────────────────────────────────
+function load(){try{const r=localStorage.getItem(SK);return r?JSON.parse(r):null;}catch{return null;}}
+function save(s){try{localStorage.setItem(SK,JSON.stringify(s));}catch{}}
+
+// ─── MONOLOGUE ───────────────────────────────────────────────
+function playMono() {
+  const container = el('monoText');
+  container.innerHTML = '';
+  el('monoBtn').style.opacity = '0';
+  let lineIdx = 0;
+
+  function nextLine() {
+    if (lineIdx >= MONO_LINES.length) {
+      el('monoBtn').style.opacity = '1';
+      return;
+    }
+    const p = document.createElement('p');
+    p.style.minHeight = '14px';
+    p.style.marginBottom = '12px';
+    p.style.opacity = '0';
+    p.style.transform = 'translateY(10px)';
+    p.style.transition = 'opacity 1s, transform 1s';
+    p.textContent = MONO_LINES[lineIdx];
+    container.appendChild(p);
+    
+    void p.offsetWidth; // reflow
+    p.style.opacity = '1';
+    p.style.transform = 'translateY(0)';
+    
+    lineIdx++;
+    monoTimer = setTimeout(nextLine, MONO_LINES[lineIdx-1] === "" ? 500 : 2000);
+  }
+  monoTimer = setTimeout(nextLine, 1000);
+}
+
+// ─── CHECKPOINT & MONTH END LOGIC ────────────────────────────
+function getWeekStr(dStr) {
+  const d = new Date(dStr); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const w1 = new Date(d.getFullYear(), 0, 4);
+  const wk = 1 + Math.round(((d - w1) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7);
+  return `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`;
+}
+
+function checkMonthEnd(state) {
+  const now = new Date();
+  const curY = now.getFullYear();
+  const curM = now.getMonth() + 1;
+  
+  if (state.currentMonth.year < curY || (state.currentMonth.year === curY && state.currentMonth.month < curM)) {
+    const rem = state.currentMonth.currentHp;
+    const mats = Math.floor(rem * 0.1); // 10% conversion rate
+    
+    if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
+    state.inventory.materials += mats;
+    
+    state.history.push({...state.currentMonth});
+    
+    state.currentMonth = {
+      year: curY, month: curM,
+      baseHp: state.character.monthlyBudget,
+      currentHp: state.character.monthlyBudget,
+      expenses: [], checkpoints: [], status: 'active'
+    };
+    save(state);
+    return { mats };
+  }
+  return null;
+}
+
+function showMonthEndModal(mats) {
+  document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));
+  el('scr-mend').classList.add('on'); window.scrollTo(0,0);
+  el('meMats').textContent = '+ ' + mats + ' ⚙️';
+}
+
+function ackMonthEnd() {
+  const s = load();
+  if(s) {
+    const p = getPendingCp(s);
+    if(p) { showCpModal(s, p); return; }
+  }
+  go('home');
+}
+
+function getPendingCp(state) {
+  if (!state || !state.currentMonth || !state.currentMonth.expenses) return null;
+  const nowWk = getWeekStr(new Date().toISOString());
+  const cps = state.currentMonth.checkpoints || [];
+  const expWeeks = [...new Set(state.currentMonth.expenses.map(e => getWeekStr(e.date)))];
+  const pending = expWeeks.filter(w => w < nowWk && !cps.includes(w));
+  if (pending.length > 0) {
+    pending.sort();
+    const tw = pending[0];
+    const exps = state.currentMonth.expenses.filter(e => getWeekStr(e.date) === tw);
+    return { weekStr: tw, totalDmg: exps.reduce((s, e) => s + e.amount, 0) };
+  }
+  return null;
+}
+function showCpModal(state, p) {
+  document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));
+  el('scr-cp').classList.add('on'); window.scrollTo(0,0);
+  el('cpDmg').textContent = '−' + Y(p.totalDmg);
+  const wl = state.currentMonth.baseHp / 4;
+  const ev = el('cpEval');
+  if(p.totalDmg===0){ ev.textContent='✨ 脅威ゼロ！素晴らしい生存能力だ！'; ev.style.color='var(--green)'; }
+  else if(p.totalDmg<=wl){ ev.textContent='👍 順調だ。効率的な迎撃ができている！'; ev.style.color='var(--green)'; }
+  else { ev.textContent='⚠️ エネルギー消費が激しい！今週は守りを固めろ！'; ev.style.color='var(--red)'; }
+  el('cpBtn').onclick = () => {
+    state.currentMonth.checkpoints = state.currentMonth.checkpoints || [];
+    state.currentMonth.checkpoints.push(p.weekStr); save(state);
+    const np = getPendingCp(state);
+    if(np) showCpModal(state, np); else go('home');
+  };
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────
+function go(name){
+  if(monoTimer) { clearTimeout(monoTimer); monoTimer=null; }
+  
+  if(name==='home'){
+    const s=load();
+    if(s&&s.currentMonth){
+      const mend = checkMonthEnd(s);
+      if(mend){ showMonthEndModal(mend.mats); return; }
+      
+      const p=getPendingCp(s);
+      if(p){showCpModal(s,p);return;}
+    }
+  }
+  document.querySelectorAll('.scr').forEach(el=>el.classList.remove('on'));
+  const el=document.getElementById('scr-'+name);
+  if(el){el.classList.add('on');window.scrollTo(0,0);}
+  
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
+  if(['home','base','history'].includes(name)) {
+    const navs = document.querySelectorAll('.ni');
+    if(name==='home') navs[0].classList.add('on');
+    if(name==='base') navs[2].classList.add('on');
+    if(name==='history') navs[3].classList.add('on');
+  }
+  
+  if(name==='mono') playMono();
+  else if(name==='home') renderHome();
+  else if(name==='history') renderHist();
+  else if(name==='expense') initExp();
+  else if(name==='base') renderBase();
+}
+
+// ─── UTILS ───────────────────────────────────────────────────
+function Y(n){return '¥'+Number(n).toLocaleString('ja-JP');}
+function hpPct(cur,base){return Math.max(0,Math.min(100,(cur/base)*100));}
+function hpCol(p){return p>60?'#3ecf8e':p>30?'#f5c542':'#e04444';}
+function cst(p,status){
+  if(status==='cleared')return 'victory';
+  if(status==='defeated')return 'defeated';
+  if(p<=0)return 'defeated'; if(p<=20)return 'critical'; if(p<=50)return 'tired';
+  return 'healthy';
+}
+function daysLeft(y,m){
+  const last=new Date(y,m,0),diff=last-new Date();
+  return Math.max(0,Math.ceil(diff/86400000));
+}
+function fmtDate(iso){
+  const d=new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function uid(){return Math.random().toString(36).substr(2,9)+Date.now().toString(36);}
+function getCat(cats,id){return cats.find(c=>c.id===id)||CATS.find(c=>c.id===id)||CATS[0];}
+function el(id){return document.getElementById(id);}
+function showErr(id,msg){const e=el(id);if(e){e.textContent='⚠️ '+msg;e.style.display='block';}}
+function hideErr(id){const e=el(id);if(e)e.style.display='none';}
+
+// ─── REGISTER ────────────────────────────────────────────────
+function pickAv(id){
+  rAvatar=id;
+  document.querySelectorAll('.avc').forEach(e=>e.classList.remove('sel'));
+  const e=el('av-'+id);if(e)e.classList.add('sel');
+}
+
+function setStep(n){
+  [1,2,3].forEach(i=>{
+    const rs=el('rs'+i);if(rs)rs.style.display=(i===n?'block':'none');
+    const sb=el('sb'+i);if(sb)sb.classList.toggle('on',i<=n);
+  });
+  ['re1','re2','re3'].forEach(id=>hideErr(id));
+  window.scrollTo(0,0);
+}
+
+function toS1(){setStep(1);}
+
+function toS2(){
+  const nm=(el('rname').value||'').trim();
+  if(!nm){showErr('re1','呼び名を入力してください');return;}
+  setStep(2);
+}
+
+function toS3(){
+  const bv=parseInt(el('rbudget').value,10)||0;
+  if(bv<1000){showErr('re2','予算は1,000円以上で入力してください');return;}
+  const list=el('catlimits'); list.innerHTML='';
+  rCats.forEach(cat=>{
+    list.innerHTML+=`<div style="display:flex;align-items:center;gap:10px;background:var(--bg);padding:10px 14px;border-radius:12px;border:1px solid var(--border);margin-bottom:8px;">
+      <span style="font-size:22px;flex-shrink:0;">${cat.icon}</span>
+      <span style="font-size:13px;font-weight:700;flex:1;">${cat.name}</span>
+      <div style="position:relative;width:120px;">
+        <input class="inp" type="number" id="cl_${cat.id}" placeholder="0" min="0" inputmode="numeric"
+          value="${cat.limit||''}" style="padding:8px 28px 8px 10px;font-size:14px;">
+        <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--txt3);">円</span>
+      </div>
+    </div>`;
+  });
+  setStep(3);
+}
+
+function updBudgetPrev(){
+  const v=parseInt(el('rbudget').value,10)||0;
+  const p=el('bprev');
+  if(v>0){el('bphp').textContent=Y(v);el('bpday').textContent=Y(Math.floor(v/30));p.style.display='block';}
+  else p.style.display='none';
+}
+
+function startGame(){
+  const nm=(el('rname').value||'').trim()||'サバイバー';
+  const bv=parseInt(el('rbudget').value,10)||0;
+  if(bv<1000){showErr('re3','予算を正しく入力してください');return;}
+  const cats=rCats.map(cat=>{
+    const inp=el('cl_'+cat.id);
+    const lim=inp?parseInt(inp.value,10)||0:0;
+    return{...cat,limit:lim||Math.floor(bv/5)};
+  });
+  const character={name:nm,avatar:rAvatar,monthlyBudget:bv,categories:cats};
+  const now=new Date();
+  const state={
+    character,
+    currentMonth:{
+      year:now.getFullYear(),month:now.getMonth()+1,
+      baseHp:bv,currentHp:bv,expenses:[],checkpoints:[],status:'active'
+    },
+    inventory: { materials: 0, unlockedChips: [] },
+    baseLevel: 1,
+    history:[]
+  };
+  save(state);
+  go('home');
+}
+
+// ─── HOME ─────────────────────────────────────────────────────
+function renderHome(){
+  const state=load();
+  if(!state||!state.character||!state.currentMonth){go('mono');return;}
+  
+  // Backward compatibility
+  if(!state.inventory) { state.inventory = {materials:0, unlockedChips:[]}; state.baseLevel = 1; save(state); }
+  
+  const {character:ch,currentMonth:cm}=state;
+  const spent=cm.baseHp-cm.currentHp;
+  const pct=hpPct(cm.currentHp,cm.baseHp);
+  const cs=cst(pct,cm.status);
+  const ci=CSTATE[cs];
+  const col=hpCol(pct);
+  const days=daysLeft(cm.year,cm.month);
+
+  el('hAvEm').textContent=AVEM[ch.avatar]||'🧑‍🦱';
+  el('hNm').textContent=ch.name;
+
+  const cem=el('hChEm');
+  cem.textContent=ci.em;
+  cem.className='chem '+(cs==='critical'?'anim-pls':cs==='healthy'?'anim-flt':'');
+  cem.style.filter=cs==='defeated'?'grayscale(100%) brightness(.5)':'none';
+
+  const cbg=el('hChBg');
+  cbg.textContent=ci.lbl;
+  Object.assign(cbg.style,{color:ci.bc,background:ci.bg,
+    border:`1px solid ${ci.bc}44`,fontFamily:'var(--font-g)',fontSize:'8px',
+    padding:'3px 10px',borderRadius:'99px'});
+
+  el('hChCard').style.boxShadow=`0 0 0 1px ${ci.gl}, 0 0 30px ${ci.gl}44`;
+  const blv = state.baseLevel || 1;
+  el('hChCard').style.backgroundImage = `url('images/room_lv${blv}.png')`;
+  el('hChCard').style.backgroundSize = 'cover';
+  el('hChCard').style.backgroundPosition = 'center';
+  
+  // Make sure the gradient overlay allows the background to be seen but keeps text readable
+  el('hChCard').style.boxShadow = `inset 0 0 0 2000px rgba(21, 21, 26, 0.75), 0 0 0 1px ${ci.gl}, 0 0 30px ${ci.gl}44`;
+
+  el('hHpLbl').textContent=Y(cm.currentHp)+' / '+Y(cm.baseHp);
+  const bar=el('hHpBar');
+  bar.style.width=pct+'%';
+  bar.style.background=pct<=20?`linear-gradient(90deg,#b02222,${col})`:`linear-gradient(90deg,${col}aa,${col})`;
+  bar.style.boxShadow=`0 0 10px ${col}66`;
+  bar.style.animation=pct<=20?'pls 1s ease-in-out infinite':'';
+  el('hHpPct').textContent=Math.round(pct)+'%';
+
+  const msgs={healthy:'コア安定。このまま乗り切れ！',tired:'コア出力低下…節約が必要だ。',
+    critical:'⚠️ コア臨界点！今すぐ出費を抑えろ！',victory:'🎉 今月の生存ミッションクリア！',
+    defeated:'💀 コア機能停止…次こそ生き残れ'};
+  const mEl=el('hStMsg');
+  mEl.textContent=msgs[cs];
+  mEl.style.color=(cs==='critical'||cs==='defeated')?'var(--red)':'var(--txt2)';
+
+  el('hHpS').textContent=Math.round(pct)+'%'; el('hHpS').style.color=col;
+  el('hDays').textContent=days+'日';
+  el('hSpent').textContent=Y(spent);
+  el('hDaily').textContent=days>0?Y(Math.floor(cm.currentHp/days)):'—';
+
+  const dmg=el('hDmgBtn'),ban=el('hBanner');
+  if(cm.status==='active'){dmg.style.display='block';ban.style.display='none';}
+  else{
+    dmg.style.display='none';ban.style.display='block';
+    if(cm.status==='cleared'){
+      ban.innerHTML='<div style="font-size:48px;margin-bottom:8px;">🏆</div><p style="font-family:var(--font-g);font-size:10px;color:var(--gold);">QUEST CLEAR!</p><p style="font-size:13px;color:var(--txt2);margin-top:8px;">今月のクエストを生き延びた！</p>';
+    }else{
+      ban.innerHTML='<div style="font-size:48px;margin-bottom:8px;">💀</div><p style="font-family:var(--font-g);font-size:10px;color:var(--red);">CORE SHUTDOWN</p><p style="font-size:13px;color:var(--txt2);margin-top:8px;">エネルギーが尽きた…今月は敗北だ</p>';
+    }
+  }
+
+  const recent=[...cm.expenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  const rl=el('hRecList'),rt=el('hRecTtl'),emp=el('hEmpty');
+  if(recent.length>0){
+    rt.style.display='block';emp.style.display='none';
+    rl.innerHTML=recent.map(e=>{
+      const cat=getCat(ch.categories,e.categoryId);
+      return `<div class="eitem"><div class="eic" style="background:${cat.color}22;">${cat.icon}</div>
+        <div class="einf"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
+        <div class="eamt">-${Y(e.amount)}</div></div>`;
+    }).join('');
+  }else{rt.style.display='none';emp.style.display='block';rl.innerHTML='';}
+}
+
+// ─── EXPENSE ──────────────────────────────────────────────────
+function initExp(){
+  const state=load();
+  const cats=state?.character?.categories||CATS;
+  const grid=el('eCatGrid');
+  grid.innerHTML=cats.map(cat=>`
+    <div class="catc ${cat.id===eCatId?'sel':''}" id="ec_${cat.id}" onclick="pickCat('${cat.id}')">
+      <div class="catic">${cat.icon}</div><div class="catnm">${cat.name}</div>
+    </div>`).join('');
+  el('eAmt').value=''; el('eMemo').value='';
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  el('eDate').value = `${y}-${m}-${d}`;
+  el('ePrev').style.display='none'; el('eErr').style.display='none';
+  el('eSubBtn').disabled=false;
+}
+
+function pickCat(id){
+  eCatId=id;
+  document.querySelectorAll('.catc').forEach(e=>e.classList.remove('sel'));
+  const e=el('ec_'+id);if(e)e.classList.add('sel');
+  updExpPrev();
+}
+
+function updExpPrev(){
+  const amt=parseInt(el('eAmt').value,10)||0;
+  const pv=el('ePrev');
+  if(amt>0){
+    const state=load();const cats=state?.character?.categories||CATS;
+    const cat=getCat(cats,eCatId);
+    el('ePrevCat').innerHTML=`<span style="font-size:22px;">${cat.icon}</span><span style="font-size:13px;color:var(--txt2);">${cat.name}</span>`;
+    el('ePrevAmt').textContent='−'+Y(amt);
+    pv.style.display='flex';
+  }else pv.style.display='none';
+}
+
+function submitExp(){
+  const amt=parseInt(el('eAmt').value,10)||0;
+  const ee=el('eErr');
+  if(amt<1){ee.textContent='⚠️ 消費エネルギーを入力してください';ee.style.display='block';return;}
+  const state=load();if(!state||!state.currentMonth)return;
+  ee.style.display='none';
+  const btn=el('eSubBtn');btn.disabled=true;
+  
+  let now = new Date().toISOString();
+  const eDateVal = el('eDate').value;
+  if(eDateVal) {
+    const [yy, mm, dd] = eDateVal.split('-');
+    now = new Date(yy, mm-1, dd, 12, 0, 0).toISOString();
+  }
+  const memo=(el('eMemo').value||'').trim();
+  
+  // Weekly Budget Check for Drop logic
+  const nowWk = getWeekStr(now);
+  const catExps = state.currentMonth.expenses.filter(e => e.categoryId === eCatId && getWeekStr(e.date) === nowWk);
+  const weeklySpent = catExps.reduce((s, e) => s + e.amount, 0) + amt;
+  const catDef = getCat(state.character.categories, eCatId);
+  const weeklyLimit = Math.floor((catDef.limit || 0) / 4);
+  
+  let droppedChip = null;
+  // Drop condition: weekly budget not exceeded (or 0)
+  if (weeklyLimit === 0 || weeklySpent <= weeklyLimit) {
+    if (Math.random() < 0.20) {
+      if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
+      const currentBaseLevel = state.baseLevel || 1;
+      const available = DATA_CHIPS.filter(c => !state.inventory.unlockedChips.includes(c.id) && c.minLevel <= currentBaseLevel);
+      if (available.length > 0) {
+        droppedChip = available[Math.floor(Math.random() * available.length)];
+        state.inventory.unlockedChips.push(droppedChip.id);
+      }
+    }
+  }
+
+  state.currentMonth.expenses.push({id:uid(),amount:amt,categoryId:eCatId,memo,date:now});
+  const newHp=Math.max(0,state.currentMonth.currentHp-amt);
+  state.currentMonth.currentHp=newHp;
+  if(newHp<=0)state.currentMonth.status='defeated';
+  save(state);
+  
+  // Animation
+  const ovl=el('dmgOvl');
+  const dn=el('dmgNum');
+  if(droppedChip) {
+    ovl.className='lore';
+    dn.textContent='✨ データチップ発見！';
+    dn.className='loretext';
+  } else {
+    ovl.className='flash';
+    dn.textContent='💥 脅威撃退！ −'+Y(amt)+' ｴﾈﾙｷﾞｰ';
+    dn.className='';
+  }
+  
+  dn.style.display='block';
+  dn.style.animation='none'; void dn.offsetWidth; dn.style.animation='fltdmg 1.5s ease-out forwards';
+  
+  setTimeout(()=>{
+    ovl.className=''; dn.style.display='none'; go('home');
+  },1500);
+}
+
+// ─── BASE CAMP ────────────────────────────────────────────────
+function renderBase() {
+  const state=load();
+  if(!state) return;
+  if(!state.inventory) { state.inventory = {materials:0, unlockedChips:[]}; state.baseLevel = 1; save(state); }
+  
+  const blv = state.baseLevel || 1;
+  const curBase = BASE_LEVELS.find(b => b.level === blv);
+  const nextBase = BASE_LEVELS.find(b => b.level === blv + 1);
+  
+  const bCard = el('bMainCard');
+  bCard.style.backgroundImage = `url('images/room_lv${blv}.png')`;
+  bCard.style.backgroundSize = 'cover';
+  bCard.style.backgroundPosition = 'center';
+  
+  el('bMat').textContent = state.inventory.materials + ' ⚙️';
+  el('bIco').textContent = curBase.icon;
+  el('bName').textContent = `Lv.${curBase.level} ${curBase.name}`;
+  el('bDesc').textContent = curBase.desc;
+  
+  const btn = el('bUpBtn');
+  const upBox = el('bUpBtnBox');
+  const maxMsg = el('bMaxMsg');
+  
+  if (nextBase) {
+    upBox.style.display = 'block';
+    maxMsg.style.display = 'none';
+    el('bUpCost').textContent = `必要資材: ${nextBase.cost} ⚙️`;
+    if (state.inventory.materials >= nextBase.cost) {
+      btn.textContent = `🚀 Lv.${nextBase.level}へアップグレード`;
+      btn.disabled = false;
+    } else {
+      btn.textContent = `資材が不足しています`;
+      btn.disabled = true;
+    }
+  } else {
+    upBox.style.display = 'none';
+    maxMsg.style.display = 'block';
+  }
+  
+  const unlocked = state.inventory.unlockedChips || [];
+  el('bChipCnt').textContent = `収集率: ${unlocked.length}/${DATA_CHIPS.length}`;
+  
+  el('bChips').innerHTML = DATA_CHIPS.map((chip, i) => {
+    const isUnl = unlocked.includes(chip.id);
+    if(isUnl) {
+      return `<div class="chip-item unlocked" onclick="showChip('${chip.id}')">
+        <div class="chip-icon">💿</div>
+        <div class="chip-name">${chip.title}</div>
+      </div>`;
+    } else {
+      return `<div class="chip-item locked">
+        <div class="chip-icon">🔒</div>
+        <div class="chip-name">DATA NO.${i+1}</div>
+      </div>`;
+    }
+  }).join('');
+}
+
+function upgradeBase() {
+  const state=load();
+  const blv = state.baseLevel || 1;
+  const nextBase = BASE_LEVELS.find(b => b.level === blv + 1);
+  if (nextBase && state.inventory.materials >= nextBase.cost) {
+    state.inventory.materials -= nextBase.cost;
+    state.baseLevel = nextBase.level;
+    save(state);
+    renderBase();
+  }
+}
+
+function showChip(id) {
+  const chip = DATA_CHIPS.find(c => c.id === id);
+  if(chip) {
+    el('cmTitle').textContent = chip.title;
+    el('cmText').textContent = chip.text;
+    el('chipModal').style.display = 'flex';
+  }
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────
+function renderHist(){
+  const state=load();if(!state||!state.character||!state.currentMonth)return;
+  const {character:ch,currentMonth:cm}=state;
+  const expenses=cm.expenses, totalSpent=cm.baseHp-cm.currentHp;
+  el('hiMonth').textContent=cm.year+'年'+cm.month+'月のデータ';
+  el('hiSpent').textContent=Y(totalSpent);
+  el('hiCnt').textContent=expenses.length+'回';
+  el('hiAvg').textContent=expenses.length>0?Y(Math.floor(totalSpent/expenses.length)):'—';
+  el('hiMax').textContent=expenses.length>0?Y(Math.max(...expenses.map(e=>e.amount))):'—';
+
+  const totals={};expenses.forEach(e=>{totals[e.categoryId]=(totals[e.categoryId]||0)+e.amount;});
+
+  // Weekly Aggregation
+  const weekTotals = {};
+  const weekCats = {};
+  expenses.forEach(e => {
+    const wk = getWeekStr(e.date);
+    weekTotals[wk] = (weekTotals[wk] || 0) + e.amount;
+    if(!weekCats[wk]) weekCats[wk] = {};
+    weekCats[wk][e.categoryId] = (weekCats[wk][e.categoryId] || 0) + e.amount;
+  });
+
+  const wcc = el('hiWeekCard'), wbars = el('hiWeekBars');
+  const weekKeys = Object.keys(weekTotals).sort();
+  if(weekKeys.length > 0) {
+    wcc.style.display = 'block';
+    const wMaxV = Math.max(...Object.values(weekTotals), 1);
+    
+    wbars.innerHTML = weekKeys.map((wk, idx) => {
+      const amt = weekTotals[wk] || 0;
+      const bw = (amt / wMaxV * 100).toFixed(1);
+      
+      let stackHtml = '';
+      const wCatData = weekCats[wk];
+      const sortedCats = Object.keys(wCatData).sort((a,b) => wCatData[b] - wCatData[a]);
+      sortedCats.forEach(cid => {
+        const catAmt = wCatData[cid];
+        const catPct = (catAmt / amt * 100).toFixed(1);
+        const catDef = getCat(ch.categories, cid);
+        stackHtml += `<div style="width:${catPct}%; background:${catDef.color}; height:100%;"></div>`;
+      });
+      
+      return `<div class="cbrow" style="margin-bottom:8px;">
+        <div class="cblbl" style="width:40px;flex:none;text-align:right;">W${idx+1}</div>
+        <div class="cbtrk">
+          <div style="width:${bw}%; display:flex; height:100%; border-radius:4px; overflow:hidden;">${stackHtml}</div>
+        </div>
+        <div class="cbamt" style="width:50px;flex:none;text-align:right;">${Y(amt)}</div>
+      </div>`;
+    }).join('');
+  } else {
+    wcc.style.display = 'none';
+  }
+  const maxV=Math.max(...Object.values(totals),1);
+  const cc=el('hiCatCard'),bars=el('hiCatBars');
+  if(Object.keys(totals).length>0){
+    cc.style.display='block';
+    bars.innerHTML=ch.categories.filter(c=>totals[c.id]).sort((a,b)=>(totals[b.id]||0)-(totals[a.id]||0))
+      .map(cat=>{
+        const amt=totals[cat.id]||0;
+        const pct=(amt/Math.max(totalSpent,1)*100).toFixed(0);
+        const bw=(amt/maxV*100).toFixed(1);
+        return `<div class="cbrow">
+          <div class="cblbl">${cat.icon} ${cat.name}</div>
+          <div class="cbtrk"><div class="cbfil" style="width:${bw}%;background:${cat.color};"></div></div>
+          <div class="cbamt" style="color:${cat.color};">${pct}%</div>
+        </div><div style="font-size:11px;color:var(--txt2);text-align:right;margin-bottom:8px;">${Y(amt)}</div>`;
+      }).join('');
+  }else cc.style.display='none';
+
+  const sorted=[...expenses].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const hl=el('hiList'),he=el('hiEmpty');
+  if(sorted.length>0){
+    he.style.display='none';
+    hl.innerHTML=sorted.map(e=>{
+      const cat=getCat(ch.categories,e.categoryId);
+      return `<div class="eitem"><div class="eic" style="background:${cat.color}22;">${cat.icon}</div>
+        <div class="einf"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
+        <div class="eamt">-${Y(e.amount)}</div></div>`;
+    }).join('');
+  }else{he.style.display='block';hl.innerHTML='';}
+}
+
+// FOR DEBUGGING ONLY
+function testAdvanceMonth() {
+  if(!confirm("強制的に翌月に進め、月間サバイバル精算処理を実行します。よろしいですか？")) return;
+  const state = load();
+  if(state) {
+    let m = state.currentMonth.month - 1;
+    let y = state.currentMonth.year;
+    if(m < 1) { m = 12; y -= 1; }
+    state.currentMonth.month = m;
+    state.currentMonth.year = y;
+    save(state);
+    go('home');
+  }
+}
+
+// ─── BOOT ────────────────────────────────────────────────────
+(function(){
+  const state=load();
+  if(state&&state.character&&state.currentMonth) go('home');
+  else go('mono');
+})();
+</script>
+</body>
+</html>
