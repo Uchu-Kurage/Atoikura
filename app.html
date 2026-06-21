@@ -274,6 +274,32 @@
   </div>
 </div>
 
+<!-- ═══════════════ EDIT BUDGET ═══════════════ -->
+<div class="scr" id="scr-edit-budget">
+  <div class="flex g12 mb24" style="align-items:center;">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--txt2);font-size:26px;cursor:pointer;padding:4px;touch-action:manipulation;">←</button>
+    <div>
+      <p class="gtitle" style="font-size:8px;">今月あといくら使える？</p>
+      <h1 style="font-size:18px;font-weight:700;margin-top:4px;">⚙️ 予算設定の変更</h1>
+    </div>
+  </div>
+  
+  <div class="card">
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">月の変動費予算（円）</label>
+    <div style="position:relative;margin-bottom:20px;">
+      <input class="inp" type="number" id="ebudget" placeholder="50000" min="1000" inputmode="numeric" oninput="updEditCatTotal()" style="padding-right:32px;">
+      <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--txt2);font-size:14px;">円</span>
+    </div>
+    
+    <h2 style="font-size:15px;font-weight:700;margin-bottom:8px;">📊 カテゴリ別のコア配分</h2>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.7;">各カテゴリの予算の合計が、月の変動費とピッタリ一致するように振り分けてください。</p>
+    <div id="editcatlimits"></div>
+    <div id="editCatTotalCalc" style="font-size:13px; font-weight:bold; text-align:center; margin-top:16px; margin-bottom:8px;"></div>
+  </div>
+  <div class="ebox" id="eeEdit" style="display:none;"></div>
+  <button class="btn btn-g" onclick="saveEditBudget()" id="saveEditBtn" style="margin-top:16px;">💾 変更を保存する</button>
+</div>
+
 <!-- ═══════════════ MONTH END ═══════════════ -->
 <div class="scr" id="scr-mend">
   <div class="tcen mb24" style="padding-top:32px;">
@@ -315,6 +341,7 @@
     <div class="flex g8" style="align-items:center;">
       <span id="hAvEm" style="font-size:20px;"></span>
       <span id="hNm" style="font-size:13px;font-weight:700;"></span>
+      <button class="btn btn-s" onclick="initEditBudget()" style="padding:4px 8px; font-size:11px; margin-left:8px;">⚙️ 設定</button>
     </div>
   </div>
 
@@ -388,6 +415,9 @@
 
     <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">対象ログ（任意メモ）</label>
     <input class="inp" type="text" id="eMemo" placeholder="例：コンビニランチモンスター" maxlength="50" style="margin-bottom:16px;">
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">日付</label>
+    <input class="inp" type="date" id="eDate" style="margin-bottom:16px;">
 
     <div id="ePrev" style="display:none;background:rgba(224,68,68,.1);border:1px solid rgba(224,68,68,.3);border-radius:12px;padding:14px;flex-direction:row;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <div id="ePrevCat" class="flex g8" style="align-items:center;"></div>
@@ -939,6 +969,11 @@ function initExp(){
       <div class="catic">${cat.icon}</div><div class="catnm">${cat.name}</div>
     </div>`).join('');
   el('eAmt').value=''; el('eMemo').value='';
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  el('eDate').value = `${y}-${m}-${d}`;
   el('ePrev').style.display='none'; el('eErr').style.display='none';
   el('eSubBtn').disabled=false;
 }
@@ -970,7 +1005,12 @@ function submitExp(){
   ee.style.display='none';
   const btn=el('eSubBtn');btn.disabled=true;
   
-  const now = new Date().toISOString();
+  let now = new Date().toISOString();
+  const eDateVal = el('eDate').value;
+  if(eDateVal) {
+    const [yy, mm, dd] = eDateVal.split('-');
+    now = new Date(yy, mm-1, dd, 12, 0, 0).toISOString();
+  }
   const memo=(el('eMemo').value||'').trim();
   
   // Weekly Budget Check for Drop logic
@@ -995,7 +1035,7 @@ function submitExp(){
   }
 
   state.currentMonth.expenses.push({id:uid(),amount:amt,categoryId:eCatId,memo,date:now});
-  const newHp=Math.max(0,state.currentMonth.currentHp-amt);
+  const newHp = state.currentMonth.currentHp - amt;
   state.currentMonth.currentHp=newHp;
   if(newHp<=0)state.currentMonth.status='defeated';
   save(state);
@@ -1156,6 +1196,82 @@ function testAdvanceMonth() {
     save(state);
     go('home');
   }
+}
+
+// ─── EDIT BUDGET ─────────────────────────────────────────────
+function initEditBudget() {
+  const state = load(); if(!state||!state.character)return;
+  const {character:ch} = state;
+  el('ebudget').value = ch.monthlyBudget;
+  
+  const list=el('editcatlimits'); list.innerHTML='';
+  ch.categories.forEach(cat=>{
+    list.innerHTML+=`<div style="display:flex;align-items:center;gap:10px;background:var(--bg);padding:10px 14px;border-radius:12px;border:1px solid var(--border);margin-bottom:8px;">
+      <span style="font-size:22px;flex-shrink:0;">${cat.icon}</span>
+      <span style="font-size:13px;font-weight:700;flex:1;">${cat.name}</span>
+      <div style="position:relative;width:120px;">
+        <input class="inp ecat-inp" type="number" id="ecl_${cat.id}" placeholder="0" min="0" inputmode="numeric"
+          value="${cat.limit||0}" oninput="updEditCatTotal()" style="padding:8px 28px 8px 10px;font-size:14px;">
+        <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--txt3);">円</span>
+      </div>
+    </div>`;
+  });
+  go('edit-budget');
+  updEditCatTotal();
+}
+
+function updEditCatTotal() {
+  const bv = parseInt(el('ebudget').value,10)||0;
+  let total = 0;
+  document.querySelectorAll('.ecat-inp').forEach(inp => { total += parseInt(inp.value,10)||0; });
+  const diff = bv - total;
+  const tc = el('editCatTotalCalc');
+  if(tc) {
+    if(diff === 0) {
+      tc.innerHTML = `<span style="color:var(--green)">✓ 予算ピッタリです！</span>`;
+      el('saveEditBtn').disabled = false;
+    } else if(diff > 0) {
+      tc.innerHTML = `<span style="color:var(--yellow)">残り振り分け可能: ${Y(diff)}</span>`;
+      el('saveEditBtn').disabled = true;
+    } else {
+      tc.innerHTML = `<span style="color:var(--red)">予算を ${Y(Math.abs(diff))} オーバーしています</span>`;
+      el('saveEditBtn').disabled = true;
+    }
+  }
+}
+
+function saveEditBudget() {
+  const state = load(); if(!state||!state.character)return;
+  const newBv = parseInt(el('ebudget').value,10)||0;
+  if(newBv < 1000) { showErr('eeEdit', '予算を正しく入力してください'); return; }
+  
+  let totalAlloc = 0;
+  const newCats = state.character.categories.map(cat => {
+    const inp = el('ecl_'+cat.id);
+    const lim = inp ? parseInt(inp.value,10)||0 : 0;
+    totalAlloc += lim;
+    return {...cat, limit: lim};
+  });
+  
+  if(totalAlloc !== newBv) {
+    showErr('eeEdit', `カテゴリ予算の合計が月の変動費と一致しません！`);
+    return;
+  }
+  hideErr('eeEdit');
+  
+  const diff = newBv - state.character.monthlyBudget;
+  state.character.monthlyBudget = newBv;
+  state.character.categories = newCats;
+  
+  if(state.currentMonth) {
+    state.currentMonth.baseHp = newBv;
+    state.currentMonth.currentHp += diff;
+    if(state.currentMonth.currentHp <= 0) state.currentMonth.status = 'defeated';
+    else state.currentMonth.status = 'active';
+  }
+  
+  save(state);
+  go('home');
 }
 
 // ─── BOOT ────────────────────────────────────────────────────
