@@ -763,7 +763,7 @@ function daysLeft(y,m){
 }
 function fmtDate(iso){
   const d=new Date(iso);
-  return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
 }
 function uid(){return Math.random().toString(36).substr(2,9)+Date.now().toString(36);}
 function getCat(cats,id){return cats.find(c=>c.id===id)||CATS.find(c=>c.id===id)||CATS[0];}
