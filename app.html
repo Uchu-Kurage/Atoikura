@@ -504,9 +504,9 @@
     <div id="hiCatBars"></div>
   </div>
 
-  <p class="stitle">全戦闘履歴</p>
+  <p class="stitle">週次内訳</p>
   <button class="btn btn-s mb16" onclick="testAdvanceMonth()" style="font-size:11px;padding:8px;">🛠️ デバッグ：強制的に月末に進める</button>
-  <div id="hiList"></div>
+  <div id="hiWeekList"></div>
   <div id="hiEmpty" class="card tcen" style="padding:32px;display:none;">
     <div style="font-size:40px;margin-bottom:8px;">📊</div>
     <p style="color:var(--txt2);">まだ戦闘データがありません</p>
@@ -1142,6 +1142,22 @@ function showChip(id) {
 }
 
 // ─── HISTORY ──────────────────────────────────────────────────
+function getWeekLabel(weekStr, expenses) {
+  // From ISO week string, get the start (Mon) and end (Sun) dates
+  const [yearStr, wStr] = weekStr.split('-W');
+  const year = parseInt(yearStr), week = parseInt(wStr);
+  // Jan 4 is always in week 1
+  const jan4 = new Date(year, 0, 4);
+  const startOfW1 = new Date(jan4);
+  startOfW1.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7);
+  const startOfWeek = new Date(startOfW1);
+  startOfWeek.setDate(startOfW1.getDate() + (week - 1) * 7);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${fmt(startOfWeek)}～${fmt(endOfWeek)}`;
+}
+
 function renderHist(){
   const state=load();if(!state||!state.character||!state.currentMonth)return;
   const {character:ch,currentMonth:cm}=state;
@@ -1170,17 +1186,90 @@ function renderHist(){
       }).join('');
   }else cc.style.display='none';
 
+  // ―― Week-grouped list ――
   const sorted=[...expenses].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const hl=el('hiList'),he=el('hiEmpty');
-  if(sorted.length>0){
-    he.style.display='none';
-    hl.innerHTML=sorted.map(e=>{
-      const cat=getCat(ch.categories,e.categoryId);
-      return `<div class="eitem"><div class="eic" style="background:${cat.color}22;">${cat.icon}</div>
-        <div class="einf"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
-        <div class="eamt">-${Y(e.amount)}</div></div>`;
+  const wl=el('hiWeekList'),he=el('hiEmpty');
+  if(sorted.length===0){he.style.display='block';wl.innerHTML='';return;}
+  he.style.display='none';
+
+  // Group by ISO week
+  const weekMap = new Map();
+  sorted.forEach(e=>{
+    const wk = getWeekStr(e.date);
+    if(!weekMap.has(wk)) weekMap.set(wk, []);
+    weekMap.get(wk).push(e);
+  });
+
+  wl.innerHTML = '';
+  let wIdx = 0;
+  weekMap.forEach((exps, weekStr)=>{
+    const weekTotal = exps.reduce((s,e)=>s+e.amount,0);
+    const weekCatTotals = {};
+    exps.forEach(e=>{ weekCatTotals[e.categoryId]=(weekCatTotals[e.categoryId]||0)+e.amount; });
+    const label = getWeekLabel(weekStr, exps);
+    const colId = 'wk_'+wIdx;
+
+    // Top3 categories for the week badge row
+    const top3 = ch.categories.filter(c=>weekCatTotals[c.id])
+      .sort((a,b)=>(weekCatTotals[b.id]||0)-(weekCatTotals[a.id]||0))
+      .slice(0, 3);
+
+    // Category bars inside week
+    const catBarsHtml = top3.map(cat=>{
+      const amt = weekCatTotals[cat.id]||0;
+      const pct = (amt/Math.max(weekTotal,1)*100).toFixed(0);
+      const bw = (amt/weekTotal*100).toFixed(1);
+      return `<div class="cbrow" style="margin-bottom:4px;">
+        <div class="cblbl" style="font-size:11px;">${cat.icon} ${cat.name}</div>
+        <div class="cbtrk" style="height:6px;"><div class="cbfil" style="width:${bw}%;background:${cat.color};"></div></div>
+        <div class="cbamt" style="color:${cat.color};font-size:11px;">${pct}%</div>
+      </div>`;
     }).join('');
-  }else{he.style.display='block';hl.innerHTML='';}
+
+    // Expense rows inside week
+    const expRowsHtml = exps.map(e=>{
+      const cat=getCat(ch.categories,e.categoryId);
+      return `<div class="eitem" style="border-left:3px solid ${cat.color}44;">
+        <div class="eic" style="background:${cat.color}22;">${cat.icon}</div>
+        <div class="einf"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
+        <div class="eamt">-${Y(e.amount)}</div>
+      </div>`;
+    }).join('');
+
+    const section = document.createElement('div');
+    section.style.marginBottom = '16px';
+    section.innerHTML = `
+      <div onclick="toggleWeek('${colId}')" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;user-select:none;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--txt2);font-family:var(--font-g);">WEEK</div>
+          <div style="font-size:15px;font-weight:700;margin-top:2px;">${label}</div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            ${top3.map(c=>`<span style="font-size:10px;background:${c.color}22;color:${c.color};border-radius:99px;padding:2px 8px;font-weight:700;">${c.icon} ${c.name}</span>`).join('')}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:var(--font-g);font-size:18px;color:var(--red);">${Y(weekTotal)}</div>
+          <div style="font-size:11px;color:var(--txt3);margin-top:2px;">${exps.length}件</div>
+          <div id="arr_${colId}" style="font-size:18px;color:var(--txt3);margin-top:4px;transition:transform .3s;">▼</div>
+        </div>
+      </div>
+      <div id="${colId}" style="display:none;">
+        <div style="background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 14px 14px;padding:12px 14px;margin-top:-8px;padding-top:20px;">
+          ${catBarsHtml ? `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">${catBarsHtml}</div>` : ''}
+          ${expRowsHtml}
+        </div>
+      </div>`;
+    wl.appendChild(section);
+    wIdx++;
+  });
+}
+
+function toggleWeek(colId) {
+  const panel = el(colId);
+  const arr = el('arr_'+colId);
+  const open = panel.style.display === 'block';
+  panel.style.display = open ? 'none' : 'block';
+  if(arr) arr.style.transform = open ? '' : 'rotate(180deg)';
 }
 
 // FOR DEBUGGING ONLY
