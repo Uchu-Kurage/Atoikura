@@ -300,6 +300,43 @@
   <button class="btn btn-g" onclick="saveEditBudget()" id="saveEditBtn" style="margin-top:16px;">💾 変更を保存する</button>
 </div>
 
+<!-- ═══════════════ SETTINGS MENU MODAL ═══════════════ -->
+<div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:3000;padding:24px;flex-direction:column;justify-content:flex-end;">
+  <div class="card" style="width:100%;max-width:480px;margin:0 auto;">
+    <p style="font-size:11px;font-weight:700;color:var(--txt2);letter-spacing:1px;margin-bottom:16px;">⚙️ 設定メニュー</p>
+    <button class="btn btn-g" onclick="document.getElementById('settingsModal').style.display='none';initEditBudget();" style="margin-bottom:10px;">💰 予算設定の変更</button>
+    <button class="btn" onclick="document.getElementById('settingsModal').style.display='none';go('share');" style="margin-bottom:16px;background:var(--card);border:1px solid var(--border);">📤 データの共有</button>
+    <button onclick="document.getElementById('settingsModal').style.display='none'" style="background:none;border:none;color:var(--txt2);font-size:13px;cursor:pointer;width:100%;padding:8px;">キャンセル</button>
+  </div>
+</div>
+
+<!-- ═══════════════ SHARE (データ共有) ═══════════════ -->
+<div class="scr" id="scr-share">
+  <div class="flex g12 mb24" style="align-items:center;">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--txt2);font-size:26px;cursor:pointer;padding:4px;touch-action:manipulation;">←</button>
+    <div>
+      <p class="gtitle" style="font-size:8px;">今月あといくら使える？</p>
+      <h1 style="font-size:18px;font-weight:700;margin-top:4px;">📤 データの共有</h1>
+    </div>
+  </div>
+
+  <div class="card mb16">
+    <p class="stitle">エクスポート</p>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:16px;line-height:1.7;">現在のデータ（予算・支出履歴）をJSON形式で取り出します。コピーメッセージで共有先に送ってください。</p>
+    <button class="btn btn-g" onclick="exportData()" style="margin-bottom:8px;">📋 クリップボードにコピー</button>
+    <button class="btn" onclick="downloadData()" style="background:var(--card);border:1px solid var(--border);">⬇️ ファイルでダウンロード</button>
+    <div id="exportMsg" style="display:none;margin-top:10px;font-size:12px;color:var(--green);text-align:center;"></div>
+  </div>
+
+  <div class="card">
+    <p class="stitle">インポート</p>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:12px;line-height:1.7;">共有されたJSONテキストを以下に貼り付けて「インポート」してください。現在のデータは上書きされます。</p>
+    <textarea id="importText" style="width:100%;height:120px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:11px;color:var(--txt);font-family:monospace;resize:vertical;box-sizing:border-box;" placeholder='共有されたJSONをここに貼り付け...'></textarea>
+    <div class="ebox" id="importErr" style="display:none;margin-top:8px;"></div>
+    <button class="btn btn-g" onclick="importData()" style="margin-top:12px;">⬆️ インポートして適用する</button>
+  </div>
+</div>
+
 <!-- ═══════════════ MONTH END ═══════════════ -->
 <div class="scr" id="scr-mend">
   <div class="tcen mb24" style="padding-top:32px;">
@@ -341,7 +378,7 @@
     <div class="flex g8" style="align-items:center;">
       <span id="hAvEm" style="font-size:20px;"></span>
       <span id="hNm" style="font-size:13px;font-weight:700;"></span>
-      <button class="btn btn-s" onclick="initEditBudget()" style="padding:4px 8px; font-size:11px; margin-left:8px;">⚙️ 設定</button>
+      <button class="btn btn-s" onclick="openSettingsMenu()" style="padding:4px 8px; font-size:11px; margin-left:8px;">⚙️ 設定</button>
     </div>
   </div>
 
@@ -1334,6 +1371,64 @@ function testAdvanceMonth() {
 }
 
 // ─── EDIT BUDGET ─────────────────────────────────────────────
+// ─── SETTINGS MENU ───────────────────────────────────────────
+function openSettingsMenu() {
+  const m = document.getElementById('settingsModal');
+  m.style.display = 'flex';
+}
+
+// ─── DATA EXPORT / IMPORT ────────────────────────────────────
+function exportData() {
+  const state = load(); if(!state) return;
+  const json = JSON.stringify(state, null, 2);
+  navigator.clipboard.writeText(json).then(() => {
+    const msg = document.getElementById('exportMsg');
+    msg.textContent = '✅ クリップボードにコピーしました！LINEなどで共有してください。';
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 4000);
+  }).catch(() => {
+    // fallback: show text in textarea-like prompt
+    const msg = document.getElementById('exportMsg');
+    msg.textContent = '⚠️ コピーに失敗しました。ダウンロードをお試しください。';
+    msg.style.display = 'block';
+  });
+}
+
+function downloadData() {
+  const state = load(); if(!state) return;
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const d = new Date();
+  a.download = `atoikura_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  const txt = document.getElementById('importText').value.trim();
+  const errEl = document.getElementById('importErr');
+  errEl.style.display = 'none';
+  if(!txt) { errEl.textContent = '⚠️ JSONテキストを貼り付けてください。'; errEl.style.display = 'block'; return; }
+  let parsed;
+  try { parsed = JSON.parse(txt); } catch(e) {
+    errEl.textContent = '⚠️ JSONの形式が正しくありません。コピーが途中で切れていないか確認してください。';
+    errEl.style.display = 'block'; return;
+  }
+  // Validate basic structure
+  if(!parsed.character || !parsed.currentMonth) {
+    errEl.textContent = '⚠️ このアプリのデータではないようです。正しいJSONを貼り付けてください。';
+    errEl.style.display = 'block'; return;
+  }
+  if(!confirm('現在のデータはすべて上書きされます。インポートしてよろしいですか？')) return;
+  save(parsed);
+  document.getElementById('importText').value = '';
+  alert('✅ インポートが完了しました！');
+  go('home');
+}
+
 function initEditBudget() {
   const state = load(); if(!state||!state.character)return;
   const {character:ch} = state;
