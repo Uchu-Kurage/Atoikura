@@ -500,8 +500,13 @@
   </div>
 
   <div class="card mb16" id="hiCatCard" style="display:none;">
-    <p class="stitle">カテゴリ別消費</p>
+    <p class="stitle">カテゴリ別予算対比</p>
     <div id="hiCatBars"></div>
+  </div>
+
+  <div class="card mb16" id="hiDayCard" style="display:none;">
+    <p class="stitle">日別支出グラフ</p>
+    <div id="hiDayChart" style="display:flex;align-items:flex-end;gap:3px;height:120px;overflow-x:auto;padding-bottom:24px;position:relative;"></div>
   </div>
 
   <p class="stitle">週次内訳</p>
@@ -1169,22 +1174,56 @@ function renderHist(){
   el('hiMax').textContent=expenses.length>0?Y(Math.max(...expenses.map(e=>e.amount))):'—';
 
   const totals={};expenses.forEach(e=>{totals[e.categoryId]=(totals[e.categoryId]||0)+e.amount;});
-  const maxV=Math.max(...Object.values(totals),1);
   const cc=el('hiCatCard'),bars=el('hiCatBars');
-  if(Object.keys(totals).length>0){
+  const activeCats = ch.categories.filter(c=>totals[c.id]||c.limit>0);
+  if(activeCats.length>0){
     cc.style.display='block';
-    bars.innerHTML=ch.categories.filter(c=>totals[c.id]).sort((a,b)=>(totals[b.id]||0)-(totals[a.id]||0))
+    bars.innerHTML=activeCats.sort((a,b)=>(totals[b.id]||0)-(totals[a.id]||0))
       .map(cat=>{
-        const amt=totals[cat.id]||0;
-        const pct=(amt/Math.max(totalSpent,1)*100).toFixed(0);
-        const bw=(amt/maxV*100).toFixed(1);
-        return `<div class="cbrow">
-          <div class="cblbl">${cat.icon} ${cat.name}</div>
-          <div class="cbtrk"><div class="cbfil" style="width:${bw}%;background:${cat.color};"></div></div>
-          <div class="cbamt" style="color:${cat.color};">${pct}%</div>
-        </div><div style="font-size:11px;color:var(--txt2);text-align:right;margin-bottom:8px;">${Y(amt)}</div>`;
+        const spent=totals[cat.id]||0;
+        const budget=cat.limit||0;
+        const maxRef=Math.max(spent, budget, 1);
+        const spentPct=(spent/maxRef*100).toFixed(1);
+        const budgetPct=budget>0?(budget/maxRef*100).toFixed(1):null;
+        const over=budget>0&&spent>budget;
+        const remain=budget>0?budget-spent:null;
+        const barColor=over?'var(--red)':cat.color;
+        return `<div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:700;">${cat.icon} ${cat.name}</span>
+            <span style="font-size:11px;color:var(--txt2);">${Y(spent)}${budget>0?' / 予算 '+Y(budget):''}</span>
+          </div>
+          <div style="position:relative;height:10px;background:var(--bg);border-radius:99px;overflow:visible;">
+            <div style="width:${spentPct}%;height:100%;background:${barColor};border-radius:99px;transition:width .4s;"></div>
+            ${budgetPct?`<div style="position:absolute;top:-3px;left:${budgetPct}%;width:2px;height:16px;background:rgba(255,255,255,0.5);border-radius:1px;"></div>`:''}          </div>
+          ${budget>0?`<div style="font-size:10px;margin-top:3px;text-align:right;color:${over?'var(--red)':'var(--txt3)'};">${over?'⚠️ '+Y(Math.abs(remain))+'オーバー':'残 '+Y(remain)}</div>`:''}
+        </div>`;
       }).join('');
   }else cc.style.display='none';
+
+  // ―― Daily bar chart ――
+  const dc=el('hiDayCard'),dch=el('hiDayChart');
+  if(expenses.length>0){
+    dc.style.display='block';
+    const daysInMonth=new Date(cm.year,cm.month,0).getDate();
+    const dailyTotals={};
+    expenses.forEach(e=>{
+      const d=new Date(e.date).getDate();
+      dailyTotals[d]=(dailyTotals[d]||0)+e.amount;
+    });
+    const maxDay=Math.max(...Object.values(dailyTotals),1);
+    const days=Array.from({length:daysInMonth},(_,i)=>i+1);
+    dch.innerHTML=days.map(d=>{
+      const amt=dailyTotals[d]||0;
+      const h=amt>0?Math.max((amt/maxDay*100),4):0;
+      const isToday=d===new Date().getDate()&&cm.month===new Date().getMonth()+1&&cm.year===new Date().getFullYear();
+      return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:18px;max-width:32px;">
+        <div style="width:100%;height:${h}px;background:${amt>0?'var(--green)':'transparent'};border-radius:3px 3px 0 0;transition:height .3s;${isToday?'background:var(--yellow);':''}"></div>
+        <div style="font-size:9px;color:${isToday?'var(--yellow)':'var(--txt3)'};margin-top:3px;white-space:nowrap;">${d}</div>
+        ${amt>0?`<div style="font-size:8px;color:var(--txt3);">${amt>=10000?(amt/10000).toFixed(1)+'万':amt>=1000?Math.round(amt/100)/10+'千':amt}</div>`:''}
+      </div>`;
+    }).join('');
+  }else dc.style.display='none';
 
   // ―― Week-grouped list ――
   const sorted=[...expenses].sort((a,b)=>new Date(b.date)-new Date(a.date));
