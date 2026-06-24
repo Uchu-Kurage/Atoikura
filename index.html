@@ -506,7 +506,7 @@
 
   <div class="card mb16" id="hiDayCard" style="display:none;">
     <p class="stitle">日別支出グラフ</p>
-    <div id="hiDayChart" style="display:flex;align-items:flex-end;gap:3px;height:120px;overflow-x:auto;padding-bottom:24px;position:relative;"></div>
+    <div id="hiDayChart" style="overflow-x:auto;"></div>
   </div>
 
   <p class="stitle">週次内訳</p>
@@ -1213,16 +1213,23 @@ function renderHist(){
     });
     const maxDay=Math.max(...Object.values(dailyTotals),1);
     const days=Array.from({length:daysInMonth},(_,i)=>i+1);
-    dch.innerHTML=days.map(d=>{
-      const amt=dailyTotals[d]||0;
-      const h=amt>0?Math.max((amt/maxDay*100),4):0;
-      const isToday=d===new Date().getDate()&&cm.month===new Date().getMonth()+1&&cm.year===new Date().getFullYear();
-      return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:18px;max-width:32px;">
-        <div style="width:100%;height:${h}px;background:${amt>0?'var(--green)':'transparent'};border-radius:3px 3px 0 0;transition:height .3s;${isToday?'background:var(--yellow);':''}"></div>
-        <div style="font-size:9px;color:${isToday?'var(--yellow)':'var(--txt3)'};margin-top:3px;white-space:nowrap;">${d}</div>
-        ${amt>0?`<div style="font-size:8px;color:var(--txt3);">${amt>=10000?(amt/10000).toFixed(1)+'万':amt>=1000?Math.round(amt/100)/10+'千':amt}</div>`:''}
+    const BAR_H=100; // px, fixed bar area height
+    dch.innerHTML=`
+      <div style="display:flex;align-items:flex-end;gap:2px;min-width:${daysInMonth*22}px;">
+        ${days.map(d=>{
+          const amt=dailyTotals[d]||0;
+          const barH=amt>0?Math.max((amt/maxDay*BAR_H),4):0;
+          const isToday=d===new Date().getDate()&&cm.month===new Date().getMonth()+1&&cm.year===new Date().getFullYear();
+          const barColor=isToday?'var(--yellow)':(amt>0?'var(--green)':'transparent');
+          const amtLabel=amt>=10000?(amt/10000).toFixed(1)+'万':amt>=1000?(amt/1000).toFixed(1)+'千':amt>0?amt:'';
+          return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:20px;">
+            <div style="font-size:8px;color:${isToday?'var(--yellow)':'var(--txt3)'};min-height:14px;display:flex;align-items:flex-end;margin-bottom:2px;white-space:nowrap;">${amtLabel}</div>
+            <div style="width:70%;height:${barH}px;background:${barColor};border-radius:3px 3px 0 0;transition:height .3s;"></div>
+            <div style="height:1px;width:100%;background:var(--border);margin-top:0;"></div>
+            <div style="font-size:9px;color:${isToday?'var(--yellow)':'var(--txt3)'};margin-top:3px;">${d}</div>
+          </div>`;
+        }).join('')}
       </div>`;
-    }).join('');
   }else dc.style.display='none';
 
   // ―― Week-grouped list ――
