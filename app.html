@@ -1006,7 +1006,8 @@ function renderHome(){
   el('hDaily').textContent=days>0?Y(Math.floor(cm.currentHp/days)):'—';
 
   const dmg=el('hDmgBtn'),ban=el('hBanner');
-  if(cm.status==='active'){dmg.style.display='block';ban.style.display='none';}
+  const showActive = cm.status==='active' || (cm.currentHp > 0 && cm.status !== 'cleared');
+  if(showActive){dmg.style.display='block';ban.style.display='none';}
   else{
     dmg.style.display='none';ban.style.display='block';
     if(cm.status==='cleared'){
