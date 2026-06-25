@@ -1028,7 +1028,11 @@ function renderHome(){
   // Make sure the gradient overlay allows the background to be seen but keeps text readable
   el('hChCard').style.boxShadow = `inset 0 0 0 2000px rgba(21, 21, 26, 0.75), 0 0 0 1px ${ci.gl}, 0 0 30px ${ci.gl}44`;
 
-  el('hHpLbl').textContent=Y(cm.currentHp)+' / '+Y(cm.baseHp);
+  if(cm.carryoverBonus > 0) {
+    el('hHpLbl').innerHTML=Y(cm.currentHp)+' / '+Y(cm.baseHp)+` <span style="font-size:10px;color:#4a9eff;">(+繰り越し ${Y(cm.carryoverBonus)})</span>`;
+  } else {
+    el('hHpLbl').textContent=Y(cm.currentHp)+' / '+Y(cm.baseHp);
+  }
   const bar=el('hHpBar');
   bar.style.width=pct+'%';
   bar.style.background=pct<=20?`linear-gradient(90deg,#b02222,${col})`:`linear-gradient(90deg,${col}aa,${col})`;
