@@ -299,8 +299,26 @@
     <div id="editCatTotalCalc" style="font-size:13px; font-weight:bold; text-align:center; margin-top:16px; margin-bottom:8px;"></div>
   </div>
   <div class="ebox" id="eeEdit" style="display:none;"></div>
-  <button class="btn btn-g" onclick="saveEditBudget()" id="saveEditBtn" style="margin-top:16px;">💾 変更を保存する</button>
 </div>
+
+<div class="card" id="carryoverCard" style="display:none;margin-top:12px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <p style="font-size:13px;font-weight:700;">📦 残額を翌月にボーナス繰り越し</p>
+      <p style="font-size:11px;color:var(--txt2);margin-top:2px;">前月の余った予算を翌月に加算します</p>
+    </div>
+    <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:pointer;">
+      <input type="checkbox" id="carryoverToggle" style="opacity:0;width:0;height:0;" onchange="updCarryoverToggle()">
+      <span id="carryoverTrack" style="position:absolute;inset:0;background:var(--bg);border:1px solid var(--border);border-radius:26px;transition:.3s;"></span>
+      <span id="carryoverKnob" style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:var(--txt3);border-radius:50%;transition:.3s;"></span>
+    </label>
+  </div>
+</div>
+
+<div style="margin-top:12px;">
+  <button class="btn btn-g" onclick="saveEditBudget()" id="saveEditBtn">💾 変更を保存する</button>
+</div>
+
 
 <!-- ═══════════════ SETTINGS MENU MODAL ═══════════════ -->
 <div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:3000;padding:24px;flex-direction:column;justify-content:flex-end;">
@@ -376,10 +394,16 @@
     <p style="font-size:12px;color:var(--txt2);margin-top:6px;">1ヶ月のミッションを生き延びました</p>
   </div>
   
-  <div class="card mb24 tcen">
+  <div class="card mb16 tcen">
     <p style="font-size:12px;color:var(--txt2);margin-bottom:12px;">獲得した開拓資材（残りエネルギーの10%）</p>
     <div style="font-family:var(--font-g);font-size:32px;color:var(--green);text-shadow:0 0 15px rgba(62,207,142,0.5);" id="meMats"></div>
     <p style="font-size:12px;color:var(--txt2);margin-top:12px;">これで部屋を片付け（アップグレード）しましょう！</p>
+  </div>
+
+  <div class="card mb24 tcen" id="meCarryCard" style="display:none;">
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:8px;">📦 残額繰り越しボーナス</p>
+    <div style="font-family:var(--font-g);font-size:28px;color:#4a9eff;text-shadow:0 0 15px rgba(74,158,255,0.5);" id="meCarry"></div>
+    <p style="font-size:11px;color:var(--txt2);margin-top:8px;">習月の予算に加算されます</p>
   </div>
   
   <button class="btn btn-g" onclick="ackMonthEnd()" style="font-size:16px;padding:16px;">次の月へ進む →</button>
@@ -733,23 +757,35 @@ function checkMonthEnd(state) {
     state.inventory.materials += mats;
     
     state.history.push({...state.currentMonth});
-    
+
+    const carryover = state.character.carryover || false;
+    const carryAmt = (carryover && rem > 0) ? rem : 0;
+    const newBase = state.character.monthlyBudget + carryAmt;
+
     state.currentMonth = {
       year: curY, month: curM,
-      baseHp: state.character.monthlyBudget,
-      currentHp: state.character.monthlyBudget,
+      baseHp: newBase,
+      currentHp: newBase,
+      carryoverBonus: carryAmt,
       expenses: [], checkpoints: [], status: 'active'
     };
     save(state);
-    return { mats };
+    return { mats, carryAmt };
   }
   return null;
 }
 
-function showMonthEndModal(mats) {
+function showMonthEndModal(mats, carryAmt) {
   document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));
   el('scr-mend').classList.add('on'); window.scrollTo(0,0);
-  el('meMats').textContent = '+ ' + mats + ' ⚙️';
+  el('meMats').textContent = mats > 0 ? '+ ' + mats + ' ⚙️' : '▶ 0 ⚙️';
+  const cc = el('meCarryCard');
+  if(carryAmt > 0) {
+    cc.style.display = 'block';
+    el('meCarry').textContent = '+ ' + Y(carryAmt);
+  } else {
+    cc.style.display = 'none';
+  }
 }
 
 function ackMonthEnd() {
@@ -800,7 +836,7 @@ function go(name){
     const s=load();
     if(s&&s.currentMonth){
       const mend = checkMonthEnd(s);
-      if(mend){ showMonthEndModal(mend.mats); return; }
+      if(mend){ showMonthEndModal(mend.mats, mend.carryAmt||0); return; }
       
       const p=getPendingCp(s);
       if(p){showCpModal(s,p);return;}
@@ -1609,6 +1645,14 @@ function initEditBudget() {
   });
   go('edit-budget');
   updEditCatTotal();
+  // Show carryover toggle
+  const cc = el('carryoverCard');
+  if(cc) {
+    cc.style.display = 'block';
+    const tog = el('carryoverToggle');
+    tog.checked = !!(ch.carryover);
+    updCarryoverToggle();
+  }
 }
 
 function updEditCatTotal() {
@@ -1628,6 +1672,23 @@ function updEditCatTotal() {
       tc.innerHTML = `<span style="color:var(--red)">予算を ${Y(Math.abs(diff))} オーバーしています</span>`;
       el('saveEditBtn').disabled = true;
     }
+  }
+}
+
+function updCarryoverToggle() {
+  const tog = el('carryoverToggle');
+  const track = el('carryoverTrack');
+  const knob = el('carryoverKnob');
+  if(tog.checked) {
+    track.style.background = 'var(--green)';
+    track.style.borderColor = 'var(--green)';
+    knob.style.background = '#fff';
+    knob.style.transform = 'translateX(22px)';
+  } else {
+    track.style.background = 'var(--bg)';
+    track.style.borderColor = 'var(--border)';
+    knob.style.background = 'var(--txt3)';
+    knob.style.transform = 'translateX(0)';
   }
 }
 
@@ -1653,9 +1714,12 @@ function saveEditBudget() {
   const diff = newBv - state.character.monthlyBudget;
   state.character.monthlyBudget = newBv;
   state.character.categories = newCats;
+  // Save carryover setting
+  const togEl = el('carryoverToggle');
+  if(togEl) state.character.carryover = togEl.checked;
   
   if(state.currentMonth) {
-    state.currentMonth.baseHp = newBv;
+    state.currentMonth.baseHp = newBv + (state.currentMonth.carryoverBonus||0);
     state.currentMonth.currentHp += diff;
     if(state.currentMonth.currentHp <= 0) state.currentMonth.status = 'defeated';
     else state.currentMonth.status = 'active';
