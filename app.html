@@ -781,7 +781,7 @@ function checkMonthEnd(state) {
 function showMonthEndModal(mats, carryAmt) {
   document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));
   el('scr-mend').classList.add('on'); window.scrollTo(0,0);
-  el('meMats').textContent = mats > 0 ? '+ ' + mats + ' ⚙️' : '▶ 0 ⚙️';
+  el('meMats').textContent = mats > 0 ? '+ ' + mats + ' 🔩' : '▶ 0 🔩';
   const cc = el('meCarryCard');
   if(carryAmt > 0) {
     cc.style.display = 'block';
@@ -1213,7 +1213,7 @@ function renderBase() {
   bCard.style.backgroundSize = 'cover';
   bCard.style.backgroundPosition = 'center';
   
-  el('bMat').textContent = state.inventory.materials + ' ⚙️';
+  el('bMat').textContent = state.inventory.materials;
   el('bIco').textContent = curBase.icon;
   el('bName').textContent = `Lv.${curBase.level} ${curBase.name}`;
   el('bDesc').textContent = curBase.desc;
@@ -1225,7 +1225,7 @@ function renderBase() {
   if (nextBase) {
     upBox.style.display = 'block';
     maxMsg.style.display = 'none';
-    el('bUpCost').textContent = `必要資材: ${nextBase.cost} ⚙️`;
+    el('bUpCost').textContent = `必要資材: ${nextBase.cost} 🔩`;
     if (state.inventory.materials >= nextBase.cost) {
       btn.textContent = `🚀 Lv.${nextBase.level}へアップグレード`;
       btn.disabled = false;
