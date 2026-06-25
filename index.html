@@ -554,7 +554,12 @@
   <div style="margin-bottom:24px;">
     <p class="gtitle">今月あといくら使える？</p>
     <h1 style="font-size:20px;font-weight:700;margin-top:8px;">戦績・分析</h1>
-    <p style="font-size:12px;color:var(--txt2);margin-top:4px;" id="hiMonth"></p>
+    <!-- Month selector -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px;">
+      <button id="hiPrevBtn" onclick="navHist(1)" style="background:none;border:none;color:var(--txt2);font-size:20px;cursor:pointer;padding:4px 8px;touch-action:manipulation;">‹</button>
+      <p style="font-size:13px;font-weight:700;" id="hiMonth"></p>
+      <button id="hiNextBtn" onclick="navHist(-1)" style="background:none;border:none;color:var(--txt2);font-size:20px;cursor:pointer;padding:4px 8px;touch-action:manipulation;">›</button>
+    </div>
   </div>
 
   <div class="card mb16">
@@ -577,7 +582,7 @@
     <div id="hiDayChart" style="overflow-x:auto;"></div>
   </div>
 
-  <p class="stitle">週次内訳</p>
+  <p class="stitle" id="hiWeekTitle">週次内訳</p>
   <button class="btn btn-s mb16" onclick="testAdvanceMonth()" style="font-size:11px;padding:8px;">🛠️ デバッグ：強制的に月末に進める</button>
   <div id="hiWeekList"></div>
   <div id="hiEmpty" class="card tcen" style="padding:32px;display:none;">
@@ -815,7 +820,7 @@ function go(name){
   
   if(name==='mono') playMono();
   else if(name==='home') renderHome();
-  else if(name==='history') renderHist();
+  else if(name==='history') { _histIdx=0; renderHist(); }
   else if(name==='expense') initExp();
   else if(name==='base') renderBase();
 }
@@ -1219,11 +1224,18 @@ function showChip(id) {
 }
 
 // ─── HISTORY ──────────────────────────────────────────────────
+let _histIdx = 0; // 0=current month, 1=1 month ago, etc.
+
+function navHist(delta) {
+  const state = load(); if(!state) return;
+  const maxIdx = (state.history||[]).length;
+  _histIdx = Math.max(0, Math.min(_histIdx + delta, maxIdx));
+  renderHist();
+}
+
 function getWeekLabel(weekStr, expenses) {
-  // From ISO week string, get the start (Mon) and end (Sun) dates
   const [yearStr, wStr] = weekStr.split('-W');
   const year = parseInt(yearStr), week = parseInt(wStr);
-  // Jan 4 is always in week 1
   const jan4 = new Date(year, 0, 4);
   const startOfW1 = new Date(jan4);
   startOfW1.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7);
@@ -1237,9 +1249,24 @@ function getWeekLabel(weekStr, expenses) {
 
 function renderHist(){
   const state=load();if(!state||!state.character||!state.currentMonth)return;
-  const {character:ch,currentMonth:cm}=state;
-  const expenses=cm.expenses, totalSpent=cm.baseHp-cm.currentHp;
-  el('hiMonth').textContent=cm.year+'年'+cm.month+'月のデータ';
+  const hist = state.history||[];
+  _histIdx = Math.max(0, Math.min(_histIdx, hist.length));
+  const isCurrentMonth = _histIdx === 0;
+  // Select data source: 0=current, 1=most recent past, etc.
+  const cm = isCurrentMonth ? state.currentMonth : hist[hist.length - _histIdx];
+  if(!cm) return;
+  const {character:ch}=state;
+
+  // Update nav buttons
+  el('hiPrevBtn').style.opacity = _histIdx >= hist.length ? '0.2' : '1';
+  el('hiPrevBtn').style.pointerEvents = _histIdx >= hist.length ? 'none' : 'auto';
+  el('hiNextBtn').style.opacity = _histIdx <= 0 ? '0.2' : '1';
+  el('hiNextBtn').style.pointerEvents = _histIdx <= 0 ? 'none' : 'auto';
+
+  const expenses=cm.expenses||[], totalSpent=(cm.baseHp||0)-(cm.currentHp||0);
+  el('hiMonth').textContent=cm.year+'年'+cm.month+'月'+(isCurrentMonth?' (今月)':' (過去)');
+  // Hide week title and edit buttons for past months
+  el('hiWeekTitle').textContent = isCurrentMonth ? '週次内訳' : '週次内訳（読み取り専用）';
   el('hiSpent').textContent=Y(totalSpent);
   el('hiCnt').textContent=expenses.length+'回';
   el('hiAvg').textContent=expenses.length>0?Y(Math.floor(totalSpent/expenses.length)):'—';
@@ -1353,10 +1380,10 @@ function renderHist(){
           <div class="einf" style="flex:1;min-width:0;"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
           <div class="eamt" style="flex-shrink:0;">-${Y(e.amount)}</div>
         </div>
-        <div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+        ${isCurrentMonth ? `<div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
           <button onclick="openEditExp('${e.id}')" style="flex:1;background:rgba(74,158,255,0.15);border:1px solid rgba(74,158,255,0.35);color:#4a9eff;border-radius:8px;padding:6px 0;font-size:12px;cursor:pointer;font-weight:700;">✏️ 編集</button>
           <button onclick="deleteExp('${e.id}')" style="flex:1;background:rgba(224,68,68,0.12);border:1px solid rgba(224,68,68,0.35);color:var(--red);border-radius:8px;padding:6px 0;font-size:12px;cursor:pointer;font-weight:700;">🗑️ 削除</button>
-        </div>
+        </div>` : ''}
       </div>`;
     }).join('');
 
