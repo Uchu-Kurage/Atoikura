@@ -430,11 +430,7 @@
 <div class="scr" id="scr-home">
   <div class="fbet mb24">
     <p class="gtitle">今月あといくら使える？</p>
-    <div class="flex g8" style="align-items:center;">
-      <span id="hAvEm" style="font-size:20px;"></span>
-      <span id="hNm" style="font-size:13px;font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80px; display:inline-block;"></span>
-      <button class="btn btn-s" onclick="openSettingsMenu()" style="padding:4px 8px; font-size:11px; margin-left:8px;">⚙️ 設定</button>
-    </div>
+    <button class="btn btn-s" onclick="openSettingsMenu()" style="padding:4px 8px; font-size:11px;">⚙️ 設定</button>
   </div>
 
   <div class="card mb16" id="hChCard" style="text-align:center; position:relative; overflow:hidden;">
@@ -576,7 +572,13 @@
 <!-- ═══════════════ HISTORY ═══════════════ -->
 <div class="scr" id="scr-history">
   <div style="margin-bottom:24px;">
-    <p class="gtitle">今月あといくら使える？</p>
+    <div class="fbet">
+      <p class="gtitle">今月あといくら使える？</p>
+      <div class="flex g8" style="align-items:center;">
+        <span id="hiAvEm" style="font-size:18px;"></span>
+        <span id="hiNm" style="font-size:12px;font-weight:700;color:var(--txt2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; display:inline-block;"></span>
+      </div>
+    </div>
     <h1 style="font-size:20px;font-weight:700;margin-top:8px;">戦績・分析</h1>
     <!-- Month selector -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px;">
@@ -1005,8 +1007,7 @@ function renderHome(){
   const col=hpCol(pct);
   const days=daysLeft(cm.year,cm.month);
 
-  el('hAvEm').textContent=AVEM[ch.avatar]||'🧑‍🦱';
-  el('hNm').textContent=ch.name;
+  // Player name moved to history screen
 
   const cem=el('hChEm');
   cem.textContent=ci.em;
@@ -1316,6 +1317,9 @@ function renderHist(){
   el('hiNextBtn').style.opacity = _histIdx <= 0 ? '0.2' : '1';
   el('hiNextBtn').style.pointerEvents = _histIdx <= 0 ? 'none' : 'auto';
 
+  el('hiAvEm').textContent=AVEM[ch.avatar]||'🧑‍🦱';
+  el('hiNm').textContent=ch.name;
+  
   const expenses=cm.expenses||[], totalSpent=(cm.baseHp||0)-(cm.currentHp||0);
   el('hiMonth').textContent=cm.year+'年'+cm.month+'月'+(isCurrentMonth?' (今月)':' (過去)');
   // Hide week title and edit buttons for past months
