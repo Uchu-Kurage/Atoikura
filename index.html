@@ -310,6 +310,35 @@
   </div>
 </div>
 
+<!-- ═══════════════ EDIT EXPENSE MODAL ═══════════════ -->
+<div id="editExpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:3000;padding:16px;overflow-y:auto;">
+  <div class="card" style="width:100%;max-width:480px;margin:24px auto;">
+    <div class="flex g12" style="align-items:center;margin-bottom:20px;">
+      <button onclick="closeEditExp()" style="background:none;border:none;color:var(--txt2);font-size:24px;cursor:pointer;padding:4px;">←</button>
+      <h2 style="font-size:16px;font-weight:700;">✏️ 支出を編集</h2>
+    </div>
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">金額</label>
+    <div style="position:relative;margin-bottom:16px;">
+      <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--txt2);">¥</span>
+      <input class="inp" type="number" id="eeAmt" min="1" inputmode="numeric" style="padding-left:36px;font-size:20px;font-weight:700;">
+    </div>
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:8px;">カテゴリ</label>
+    <div class="cgrid" id="eeCatGrid" style="margin-bottom:16px;"></div>
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">メモ（任意）</label>
+    <input class="inp" type="text" id="eeMemo" placeholder="例：コンビニ" maxlength="50" style="margin-bottom:16px;">
+
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">日付</label>
+    <input class="inp" type="date" id="eeDate" style="margin-bottom:20px;">
+
+    <div class="ebox" id="eeErr" style="display:none;margin-bottom:12px;"></div>
+    <button class="btn btn-g" onclick="saveEditExp()" style="margin-bottom:8px;">💾 変更を保存</button>
+    <button onclick="closeEditExp()" style="background:none;border:none;color:var(--txt2);font-size:13px;cursor:pointer;width:100%;padding:8px;">キャンセル</button>
+  </div>
+</div>
+
 <!-- ═══════════════ SHARE (データ共有) ═══════════════ -->
 <div class="scr" id="scr-share">
   <div class="flex g12 mb24" style="align-items:center;">
@@ -1312,10 +1341,16 @@ function renderHist(){
     // Expense rows inside week
     const expRowsHtml = exps.map(e=>{
       const cat=getCat(ch.categories,e.categoryId);
-      return `<div class="eitem" style="border-left:3px solid ${cat.color}44;">
-        <div class="eic" style="background:${cat.color}22;">${cat.icon}</div>
-        <div class="einf"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
-        <div class="eamt">-${Y(e.amount)}</div>
+      return `<div style="border-left:3px solid ${cat.color}44;background:var(--card);border-radius:0;margin-bottom:0;padding:10px 12px;border-bottom:1px solid var(--border)22;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="eic" style="background:${cat.color}22;flex-shrink:0;">${cat.icon}</div>
+          <div class="einf" style="flex:1;min-width:0;"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
+          <div class="eamt" style="flex-shrink:0;">-${Y(e.amount)}</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+          <button onclick="openEditExp('${e.id}')" style="flex:1;background:rgba(74,158,255,0.15);border:1px solid rgba(74,158,255,0.35);color:#4a9eff;border-radius:8px;padding:6px 0;font-size:12px;cursor:pointer;font-weight:700;">✏️ 編集</button>
+          <button onclick="deleteExp('${e.id}')" style="flex:1;background:rgba(224,68,68,0.12);border:1px solid rgba(224,68,68,0.35);color:var(--red);border-radius:8px;padding:6px 0;font-size:12px;cursor:pointer;font-weight:700;">🗑️ 削除</button>
+        </div>
       </div>`;
     }).join('');
 
@@ -1345,6 +1380,91 @@ function renderHist(){
     wl.appendChild(section);
     wIdx++;
   });
+}
+
+// ─── EXPENSE EDIT / DELETE ────────────────────────────────────
+let _editingExpId = null;
+let _editingCatId = null;
+
+function openEditExp(id) {
+  const state = load(); if(!state||!state.character||!state.currentMonth) return;
+  const exp = state.currentMonth.expenses.find(e=>e.id===id);
+  if(!exp) return;
+  _editingExpId = id;
+  _editingCatId = exp.categoryId;
+
+  el('eeAmt').value = exp.amount;
+  el('eeMemo').value = exp.memo || '';
+  // Set date
+  const d = new Date(exp.date);
+  const yy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  el('eeDate').value = `${yy}-${mm}-${dd}`;
+  el('eeErr').style.display = 'none';
+
+  // Build category grid
+  const grid = el('eeCatGrid');
+  grid.innerHTML = state.character.categories.map(cat=>`
+    <div class="catc ${cat.id===_editingCatId?'sel':''}" id="eec_${cat.id}" onclick="pickEECat('${cat.id}')">
+      <div class="catic">${cat.icon}</div><div class="catnm">${cat.name}</div>
+    </div>`).join('');
+
+  el('editExpModal').style.display = 'block';
+}
+
+function pickEECat(id) {
+  _editingCatId = id;
+  document.querySelectorAll('#eeCatGrid .catc').forEach(el=>{
+    el.classList.toggle('sel', el.id==='eec_'+id);
+  });
+}
+
+function closeEditExp() {
+  el('editExpModal').style.display = 'none';
+  _editingExpId = null;
+  _editingCatId = null;
+}
+
+function saveEditExp() {
+  const amt = parseInt(el('eeAmt').value, 10);
+  const errEl = el('eeErr');
+  if(!amt || amt < 1) { errEl.textContent='⚠️ 金額を入力してください。'; errEl.style.display='block'; return; }
+  if(!_editingCatId)  { errEl.textContent='⚠️ カテゴリを選択してください。'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+
+  const state = load(); if(!state) return;
+  const idx = state.currentMonth.expenses.findIndex(e=>e.id===_editingExpId);
+  if(idx===-1) return;
+
+  const oldAmt = state.currentMonth.expenses[idx].amount;
+  const diff = amt - oldAmt; // positive = increased spending
+
+  // Update expense
+  state.currentMonth.expenses[idx].amount = amt;
+  state.currentMonth.expenses[idx].categoryId = _editingCatId;
+  state.currentMonth.expenses[idx].memo = (el('eeMemo').value||'').trim();
+  const dateVal = el('eeDate').value;
+  if(dateVal) {
+    const [y,m,d] = dateVal.split('-');
+    state.currentMonth.expenses[idx].date = new Date(y,m-1,d,12,0,0).toISOString();
+  }
+  // Adjust HP by difference
+  state.currentMonth.currentHp -= diff;
+
+  save(state);
+  closeEditExp();
+  renderHist();
+}
+
+function deleteExp(id) {
+  if(!confirm('この支出を削除してよろしいですか？')) return;
+  const state = load(); if(!state) return;
+  const idx = state.currentMonth.expenses.findIndex(e=>e.id===id);
+  if(idx===-1) return;
+  const amt = state.currentMonth.expenses[idx].amount;
+  state.currentMonth.expenses.splice(idx, 1);
+  state.currentMonth.currentHp += amt; // restore HP
+  save(state);
+  renderHist();
 }
 
 function toggleWeek(colId) {
