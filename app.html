@@ -1008,15 +1008,19 @@ function renderHome(){
   el('hDaily').textContent=days>0?Y(Math.floor(cm.currentHp/days)):'—';
 
   const dmg=el('hDmgBtn'),ban=el('hBanner');
-  const showActive = cm.status==='active' || (cm.currentHp > 0 && cm.status !== 'cleared');
-  if(showActive){dmg.style.display='block';ban.style.display='none';}
-  else{
-    dmg.style.display='none';ban.style.display='block';
-    if(cm.status==='cleared'){
-      ban.innerHTML='<div style="font-size:48px;margin-bottom:8px;">🏆</div><p style="font-family:var(--font-g);font-size:10px;color:var(--gold);">QUEST CLEAR!</p><p style="font-size:13px;color:var(--txt2);margin-top:8px;">今月のクエストを生き延びた！</p>';
-    }else{
-      ban.innerHTML='<div style="font-size:48px;margin-bottom:8px;">💀</div><p style="font-family:var(--font-g);font-size:10px;color:var(--red);">CORE SHUTDOWN</p><p style="font-size:13px;color:var(--txt2);margin-top:8px;">エネルギーが尽きた…今月は敗北だ</p>';
-    }
+  if(cm.status==='cleared'){
+    // Month cleared: show trophy banner, hide expense button
+    dmg.style.display='none';
+    ban.style.display='block';
+    ban.innerHTML='<div style="font-size:48px;margin-bottom:8px;">🏆</div><p style="font-family:var(--font-g);font-size:10px;color:var(--gold);">QUEST CLEAR!</p><p style="font-size:13px;color:var(--txt2);margin-top:8px;">今月のクエストを生き延びた！</p>';
+  } else if(cm.currentHp<=0) {
+    // Defeated but can still register: show warning banner + button
+    dmg.style.display='block';
+    ban.style.display='block';
+    ban.innerHTML='<p style="font-family:var(--font-g);font-size:10px;color:var(--red);">⚠️ CORE SHUTDOWN</p><p style="font-size:12px;color:var(--txt2);margin-top:4px;">エネルギーが尽きた…それでも記録は続けられる</p>';
+  } else {
+    dmg.style.display='block';
+    ban.style.display='none';
   }
 
   const recent=[...cm.expenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
