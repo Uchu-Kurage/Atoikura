@@ -824,7 +824,6 @@ function hpPct(cur,base){return Math.max(0,Math.min(100,(cur/base)*100));}
 function hpCol(p){return p>60?'#3ecf8e':p>30?'#f5c542':'#e04444';}
 function cst(p,status){
   if(status==='cleared')return 'victory';
-  if(status==='defeated')return 'defeated';
   if(p<=0)return 'defeated'; if(p<=20)return 'critical'; if(p<=50)return 'tired';
   return 'healthy';
 }
@@ -1449,6 +1448,10 @@ function saveEditExp() {
   }
   // Adjust HP by difference
   state.currentMonth.currentHp -= diff;
+  // If HP is back positive, clear defeated status
+  if(state.currentMonth.currentHp > 0 && state.currentMonth.status === 'defeated') {
+    state.currentMonth.status = '';
+  }
 
   save(state);
   closeEditExp();
@@ -1463,6 +1466,10 @@ function deleteExp(id) {
   const amt = state.currentMonth.expenses[idx].amount;
   state.currentMonth.expenses.splice(idx, 1);
   state.currentMonth.currentHp += amt; // restore HP
+  // If HP is back positive, clear defeated status
+  if(state.currentMonth.currentHp > 0 && state.currentMonth.status === 'defeated') {
+    state.currentMonth.status = '';
+  }
   save(state);
   renderHist();
 }
