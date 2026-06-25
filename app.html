@@ -153,12 +153,14 @@
     #dmgOvl.flash{animation:fldmg .6s ease-out forwards;}
     #dmgOvl.lore{animation:fllore .8s ease-out forwards;}
     
-    #dmgNum{position:fixed;top:38%;left:50%;transform:translateX(-50%);
-      font-family:var(--font-u);font-weight:700;font-size:20px;color:var(--green);
-      text-shadow:0 0 20px rgba(62,207,142,.8),2px 2px 0 #000;
-      pointer-events:none;z-index:1000;white-space:nowrap;display:none;
-      animation:fltdmg 1s ease-out forwards;}
-    #dmgNum.loretext{color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.8),2px 2px 0 #000;}
+    #dmgNum{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
+      font-family:var(--font-u);font-weight:700;font-size:14px;color:var(--green);
+      background:rgba(10,10,20,0.92);border:1px solid rgba(62,207,142,0.4);
+      border-radius:16px;padding:12px 20px;text-align:center;
+      box-shadow:0 4px 24px rgba(62,207,142,.25);
+      pointer-events:none;z-index:1000;white-space:pre-line;display:none;min-width:200px;max-width:80vw;
+      animation:fltdmg 1.5s ease-out forwards;}
+    #dmgNum.loretext{color:var(--gold);border-color:rgba(255,215,0,0.4);box-shadow:0 4px 24px rgba(255,215,0,.2);}
 
     /* ── CHIP GRID ── */
     .chip-item{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border .2s;}
@@ -1120,7 +1122,7 @@ function submitExp(){
     dn.className='loretext';
   } else {
     ovl.className='flash';
-    dn.textContent='💥 脅威撃退！ −'+Y(amt)+' ｴﾈﾙｷﾞｰ';
+    dn.innerHTML='💥 脅威撃退！<br><span style="font-size:12px;opacity:0.85;">−'+Y(amt)+' ｴﾈﾙｷﾞｰ消費</span>';
     dn.className='';
   }
   
