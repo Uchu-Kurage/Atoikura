@@ -1045,7 +1045,20 @@ function renderHome(){
     defeated:'💀 コア機能停止…次こそ生き残れ'};
   const mEl=el('hStMsg');
   mEl.textContent=msgs[cs];
-  mEl.style.color=(cs==='critical'||cs==='defeated')?'var(--red)':'rgba(255,255,255,0.85)';
+  mEl.style.display='inline-block';
+  mEl.style.padding= (cs==='critical'||cs==='defeated') ? '4px 8px' : '0';
+  mEl.style.borderRadius='4px';
+  if(cs==='critical'||cs==='defeated'){
+    mEl.style.color='#fff';
+    mEl.style.background='rgba(239,68,68,0.8)';
+    mEl.style.fontWeight='700';
+    mEl.style.boxShadow='0 2px 8px rgba(239,68,68,0.3)';
+  } else {
+    mEl.style.color='rgba(255,255,255,0.85)';
+    mEl.style.background='transparent';
+    mEl.style.fontWeight='normal';
+    mEl.style.boxShadow='none';
+  }
 
   el('hHpS').textContent=Math.round(pct)+'%'; el('hHpS').style.color=col;
   el('hDays').textContent=days+'日';
