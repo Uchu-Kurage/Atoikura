@@ -1190,8 +1190,8 @@ function submitExp(){
   const weeklyLimit = Math.floor((catDef.limit || 0) / 4);
   
   let droppedChip = null;
-  // Drop condition: weekly budget not exceeded (or 0)
-  if (weeklyLimit === 0 || weeklySpent <= weeklyLimit) {
+  // Drop condition: category must have a budget > 0, and weekly budget not exceeded
+  if (weeklyLimit > 0 && weeklySpent <= weeklyLimit) {
     if (Math.random() < 0.20) {
       if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
       const currentBaseLevel = state.baseLevel || 1;
