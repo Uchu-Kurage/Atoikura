@@ -530,7 +530,7 @@
       <span id="bMat" style="font-size:14px;font-weight:700;color:var(--green);"></span>
     </div>
   </div>
-  <p style="font-size:11px;color:var(--txt3);margin-bottom:24px;text-align:right;line-height:1.4;">※資材（🔩）は月末のサバイバル精算時に、<br>その月の戦績に応じて獲得できます。</p>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:24px;text-align:right;line-height:1.4;">※資材（🔩）は月末のサバイバル精算時に獲得できます。<br>（赤字でなければクリアボーナス1000＋余った予算の10%）</p>
   
   <div class="card tcen mb24" id="bMainCard" style="position:relative;overflow:hidden;">
     <div style="position:absolute;inset:0;background:rgba(28,28,36,0.7);z-index:0;pointer-events:none;" id="bMainOvl"></div>
@@ -759,7 +759,10 @@ function checkMonthEnd(state) {
   
   if (state.currentMonth.year < curY || (state.currentMonth.year === curY && state.currentMonth.month < curM)) {
     const rem = state.currentMonth.currentHp;
-    const mats = Math.floor(rem * 0.1); // 10% conversion rate
+    let mats = rem > 0 ? Math.floor(rem * 0.1) : 0; // 10% conversion rate
+    if (rem >= 0) {
+      mats += 1000; // クリアボーナス
+    }
     
     if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
     state.inventory.materials += mats;
