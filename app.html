@@ -608,18 +608,19 @@
     <div id="hiCatBars"></div>
   </div>
 
+  <p class="stitle" id="hiWeekTitle">週次内訳</p>
+  <div id="hiWeekList"></div>
+  <div id="hiEmpty" class="card tcen" style="padding:32px;display:none;margin-bottom:16px;">
+    <div style="font-size:40px;margin-bottom:8px;">📊</div>
+    <p style="color:var(--txt2);">まだ戦闘データがありません</p>
+  </div>
+
   <div class="card mb16" id="hiDayCard" style="display:none;">
     <p class="stitle">日別支出グラフ</p>
     <div id="hiDayChart" style="overflow-x:auto;"></div>
   </div>
 
-  <p class="stitle" id="hiWeekTitle">週次内訳</p>
   <button class="btn btn-s mb16" onclick="testAdvanceMonth()" style="font-size:11px;padding:8px;">🛠️ デバッグ：強制的に月末に進める</button>
-  <div id="hiWeekList"></div>
-  <div id="hiEmpty" class="card tcen" style="padding:32px;display:none;">
-    <div style="font-size:40px;margin-bottom:8px;">📊</div>
-    <p style="color:var(--txt2);">まだ戦闘データがありません</p>
-  </div>
 
   <nav class="bnav">
     <button class="ni" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
