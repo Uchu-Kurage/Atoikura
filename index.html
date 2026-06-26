@@ -735,12 +735,20 @@ const BASE_LEVELS = [
 ];
 
 const LIFETIME_BADGES = [
-  { id: 'b1', req: 1,       icon: '🔰', title: 'ルーキー防衛者', desc: '初めての余剰エネルギーを確保した。' },
-  { id: 'b2', req: 10000,   icon: '🔧', title: '区画修復士',     desc: '累計10,000の防衛エネルギーを蓄積し、一部の施設を修復した。' },
-  { id: 'b3', req: 50000,   icon: '🛡️', title: '防衛部隊長',     desc: '累計50,000の防衛エネルギーを蓄積し、強固な防衛網を築いた。' },
-  { id: 'b4', req: 100000,  icon: '🏙️', title: '都市の守護者',   desc: '累計100,000の防衛エネルギーを蓄積し、一つの都市を再建した。' },
-  { id: 'b5', req: 500000,  icon: '🌍', title: '星の救世主',     desc: '累計500,000の防衛エネルギーを蓄積し、この星に希望をもたらした。' },
-  { id: 'b6', req: 1000000, icon: '👑', title: '伝説の生存者',   desc: '累計1,000,000の防衛エネルギーを蓄積。もはや伝説として語り継がれる存在。' }
+  // 累計エネルギー系
+  { id: 'b1', icon: '🔰', title: 'ルーキー防衛者', desc: '初めての余剰エネルギーを確保した。', reqText: '累計 ¥1', condition: s => (s.character.lifetimeSaved||0) >= 1 },
+  { id: 'b2', icon: '🔧', title: '区画修復士', desc: '累計10,000の防衛エネルギーを蓄積し、一部の施設を修復した。', reqText: '累計 ¥10,000', condition: s => (s.character.lifetimeSaved||0) >= 10000 },
+  { id: 'b3', icon: '🛡️', title: '防衛部隊長', desc: '累計50,000の防衛エネルギーを蓄積し、強固な防衛網を築いた。', reqText: '累計 ¥50,000', condition: s => (s.character.lifetimeSaved||0) >= 50000 },
+  { id: 'b4', icon: '🏙️', title: '都市の守護者', desc: '累計100,000の防衛エネルギーを蓄積し、一つの都市を再建した。', reqText: '累計 ¥100,000', condition: s => (s.character.lifetimeSaved||0) >= 100000 },
+  { id: 'b5', icon: '🌍', title: '星の救世主', desc: '累計500,000の防衛エネルギーを蓄積し、この星に希望をもたらした。', reqText: '累計 ¥500,000', condition: s => (s.character.lifetimeSaved||0) >= 500000 },
+  { id: 'b6', icon: '👑', title: '伝説の生存者', desc: '累計1,000,000の防衛エネルギーを蓄積。もはや伝説として語り継がれる存在。', reqText: '累計 ¥1,000,000', condition: s => (s.character.lifetimeSaved||0) >= 1000000 },
+  // イベント系
+  { id: 'e1', icon: '🔫', title: 'ファーストコンタクト', desc: '初めて未知の脅威と交戦し、これを撃退（支出）した。', reqText: '初めての支出', condition: s => s.currentMonth.expenses.length > 0 || (s.history&&s.history.some(h => h.expenses.length > 0)) },
+  { id: 'e2', icon: '🎖️', title: '生還者', desc: '過酷な1ヶ月を赤字にならずに生き延び、確かな生存能力を証明した。', reqText: '初めての黒字クリア', condition: s => s.history&&s.history.some(h => h.currentHp >= 0) },
+  { id: 'e3', icon: '💀', title: '基地陥落', desc: '初めて予算が尽き、基地が陥落（赤字）した。この痛みを次への教訓とせよ。', reqText: '初めての赤字', condition: s => s.currentMonth.currentHp < 0 || (s.history&&s.history.some(h => h.currentHp < 0)) },
+  { id: 'e4', icon: '💥', title: '巨大脅威の撃破', desc: '基地のエネルギーを大きく削る巨大な脅威（10,000円以上の支出）を単独で撃破した。', reqText: '1回で¥10,000以上の支出', condition: s => s.currentMonth.expenses.some(e => e.amount >= 10000) || (s.history&&s.history.some(h => h.expenses.some(e => e.amount >= 10000))) },
+  { id: 'e5', icon: '🌧️', title: '連続迎撃', desc: '次々と押し寄せる脅威に対し、息をつく暇もなく迎撃を続けた。', reqText: '同日に3回以上の支出', condition: s => { const counts={}; let ok=false; const allExp=[...s.currentMonth.expenses]; if(s.history) s.history.forEach(h=>allExp.push(...h.expenses)); allExp.forEach(e=>{ const d=new Date(e.date).toDateString(); counts[d]=(counts[d]||0)+1; if(counts[d]>=3)ok=true; }); return ok; } },
+  { id: 'e6', icon: '✨', title: '完全防衛', desc: '完璧な防衛戦術により、幾日も無傷（支出0円）でやり過ごすことに成功した。', reqText: '月間で10日以上の無支出日', condition: s => { if(!s.history) return false; return s.history.some(h => { const days=new Date(h.year, h.month, 0).getDate(); const spentDays=new Set(h.expenses.map(e=>new Date(e.date).getDate())); return (days - spentDays.size) >= 10; }); } }
 ];
 
 // ─── MUTABLE STATE ───────────────────────────────────────────
@@ -1069,6 +1077,9 @@ function renderHome(){
     save(state);
   }
   
+  // Check achievements (will show popup if newly unlocked)
+  checkAchievements(state, true);
+  
   const {character:ch,currentMonth:cm}=state;
   const spent=cm.baseHp-cm.currentHp;
   const pct=hpPct(cm.currentHp,cm.baseHp);
@@ -1261,6 +1272,7 @@ function submitExp(){
   state.currentMonth.currentHp=newHp;
   if(newHp<=0)state.currentMonth.status='defeated';
   save(state);
+  checkAchievements(state, true);
   
   // Animation
   const ovl=el('dmgOvl');
@@ -1363,6 +1375,71 @@ function showChip(id) {
   }
 }
 
+function checkAchievements(state, showPopup = true) {
+  if(!state || !state.character) return state;
+  if(!state.character.unlockedBadges) state.character.unlockedBadges = [];
+  
+  let newlyUnlocked = [];
+  LIFETIME_BADGES.forEach(b => {
+    if(!state.character.unlockedBadges.includes(b.id) && b.condition(state)) {
+      state.character.unlockedBadges.push(b.id);
+      newlyUnlocked.push(b);
+    }
+  });
+  
+  if(newlyUnlocked.length > 0) {
+    save(state);
+    if(showPopup) {
+      newlyUnlocked.forEach((b, i) => {
+        setTimeout(() => showAchievementToast(b), i * 1500);
+      });
+    }
+  }
+  return state;
+}
+
+function showAchievementToast(badge) {
+  const toast = document.createElement('div');
+  toast.style.position = 'fixed';
+  toast.style.bottom = '80px';
+  toast.style.left = '50%';
+  toast.style.transform = 'translateX(-50%) translateY(20px)';
+  toast.style.background = 'rgba(28,28,36,0.95)';
+  toast.style.border = '1px solid var(--gold)';
+  toast.style.borderRadius = '8px';
+  toast.style.padding = '12px 16px';
+  toast.style.display = 'flex';
+  toast.style.alignItems = 'center';
+  toast.style.gap = '12px';
+  toast.style.color = '#fff';
+  toast.style.zIndex = '3000';
+  toast.style.boxShadow = '0 0 20px rgba(255,215,0,0.3)';
+  toast.style.opacity = '0';
+  toast.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+  toast.style.width = 'max-content';
+  toast.style.maxWidth = '90vw';
+  
+  toast.innerHTML = `
+    <div style="font-size:32px; filter:drop-shadow(0 0 5px rgba(255,215,0,0.8));">${badge.icon}</div>
+    <div>
+      <div style="font-size:10px; color:var(--gold); font-weight:700; margin-bottom:2px;">実績解除！</div>
+      <div style="font-size:14px; font-weight:700;">${badge.title}</div>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  }, 50);
+  
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(-20px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
 function showBadgesModal() {
   const state = load();
   if(!state || !state.character) return;
@@ -1371,9 +1448,10 @@ function showBadgesModal() {
   
   const list = el('bmList');
   list.innerHTML = '';
+  const unlocked = state.character.unlockedBadges || [];
   
   LIFETIME_BADGES.forEach(b => {
-    const isUnlocked = total >= b.req;
+    const isUnlocked = unlocked.includes(b.id);
     const div = document.createElement('div');
     div.style.padding = '12px';
     div.style.borderRadius = '8px';
@@ -1388,7 +1466,7 @@ function showBadgesModal() {
       <div style="font-size:28px; width:40px; text-align:center; filter:${isUnlocked ? 'drop-shadow(0 0 5px rgba(255,215,0,0.5))' : 'none'};">${isUnlocked ? b.icon : '🔒'}</div>
       <div style="flex:1;">
         <div style="font-weight:700; color:${isUnlocked ? 'var(--gold)' : 'var(--txt2)'}; margin-bottom:4px; font-size:14px;">${isUnlocked ? b.title : '???'}</div>
-        <div style="font-size:10px; color:var(--txt3); margin-bottom:4px;">条件: 累計 ¥${b.req.toLocaleString('ja-JP')}</div>
+        <div style="font-size:10px; color:var(--txt3); margin-bottom:4px;">条件: ${b.reqText}</div>
         <div style="font-size:11px; color:var(--txt); line-height:1.4;">${isUnlocked ? b.desc : '条件を満たすと解除されます。'}</div>
       </div>
     `;
