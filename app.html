@@ -564,6 +564,20 @@
     </div>
   </div>
 
+  <div id="badgesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);z-index:2000;padding:24px;flex-direction:column;justify-content:center;align-items:center;">
+    <div class="card" style="width:100%;max-width:400px;border-color:var(--gold);max-height:80vh;display:flex;flex-direction:column;">
+      <h2 style="font-size:18px;font-weight:700;text-align:center;margin-bottom:8px;color:var(--gold);">生涯防衛実績</h2>
+      <div style="text-align:center;margin-bottom:16px;">
+        <p style="font-size:12px;color:var(--txt2);">累計防衛エネルギー（総余剰予算）</p>
+        <p id="bmTotal" style="font-size:24px;font-weight:700;color:var(--green);font-family:var(--font-g);"></p>
+      </div>
+      <div id="bmList" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px;"></div>
+      <div style="margin-top:16px;text-align:center;">
+        <button class="btn btn-s" onclick="document.getElementById('badgesModal').style.display='none'">閉じる</button>
+      </div>
+    </div>
+  </div>
+
   <nav class="bnav">
     <button class="ni" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
     <button class="ni" onclick="go('expense')" style="padding:0 8px;">
@@ -584,7 +598,10 @@
         <span id="hiNm" style="font-size:12px;font-weight:700;color:var(--txt2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; display:inline-block;"></span>
       </div>
     </div>
-    <h1 style="font-size:20px;font-weight:700;margin-top:8px;">戦績・分析</h1>
+    <div class="fbet" style="align-items:center;margin-top:8px;">
+      <h1 style="font-size:20px;font-weight:700;">戦績・分析</h1>
+      <button class="btn btn-s" onclick="showBadgesModal()" style="font-size:11px;padding:6px 12px;width:auto;background:linear-gradient(135deg,var(--gold),#d4af37);color:#000;border:none;">🎖️ 生涯防衛実績</button>
+    </div>
     <!-- Month selector -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px;">
       <button id="hiPrevBtn" onclick="navHist(1)" style="background:none;border:none;color:var(--txt2);font-size:20px;cursor:pointer;padding:4px 8px;touch-action:manipulation;">‹</button>
@@ -601,6 +618,19 @@
       <div class="sc"><div class="slbl">1回平均</div><div class="sval" id="hiAvg" style="font-size:16px;"></div></div>
       <div class="sc"><div class="slbl">最大消費</div><div class="sval" id="hiMax" style="font-size:16px;color:var(--red);"></div></div>
     </div>
+  </div>
+
+  <div class="card mb16">
+    <div class="fbet" style="margin-bottom:12px;">
+      <p class="stitle" style="margin-bottom:0;">防衛ログ</p>
+      <div style="font-size:10px;color:var(--txt3);display:flex;gap:4px;align-items:center;">
+        <span style="width:8px;height:8px;background:var(--green);display:inline-block;border-radius:2px;"></span>無傷
+        <span style="width:8px;height:8px;background:var(--yellow);display:inline-block;border-radius:2px;margin-left:4px;"></span>通常
+        <span style="width:8px;height:8px;background:var(--red);display:inline-block;border-radius:2px;margin-left:4px;"></span>被弾大
+      </div>
+    </div>
+    <div id="hiHeatmap" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+    <div id="hiHeatTip" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:12px;min-height:16px;">タップして詳細を表示</div>
   </div>
 
   <div class="card mb16" id="hiCatCard" style="display:none;">
@@ -704,6 +734,15 @@ const BASE_LEVELS = [
   { level: 5, name: '緑豊かなペントハウス', desc: '心まで豊かになる、究極の「丁寧な暮らし」。', cost: 20000, icon: '✨' }
 ];
 
+const LIFETIME_BADGES = [
+  { id: 'b1', req: 1,       icon: '🔰', title: 'ルーキー防衛者', desc: '初めての余剰エネルギーを確保した。' },
+  { id: 'b2', req: 10000,   icon: '🔧', title: '区画修復士',     desc: '累計10,000の防衛エネルギーを蓄積し、一部の施設を修復した。' },
+  { id: 'b3', req: 50000,   icon: '🛡️', title: '防衛部隊長',     desc: '累計50,000の防衛エネルギーを蓄積し、強固な防衛網を築いた。' },
+  { id: 'b4', req: 100000,  icon: '🏙️', title: '都市の守護者',   desc: '累計100,000の防衛エネルギーを蓄積し、一つの都市を再建した。' },
+  { id: 'b5', req: 500000,  icon: '🌍', title: '星の救世主',     desc: '累計500,000の防衛エネルギーを蓄積し、この星に希望をもたらした。' },
+  { id: 'b6', req: 1000000, icon: '👑', title: '伝説の生存者',   desc: '累計1,000,000の防衛エネルギーを蓄積。もはや伝説として語り継がれる存在。' }
+];
+
 // ─── MUTABLE STATE ───────────────────────────────────────────
 let rAvatar='survivor_a', rCats=CATS.map(c=>({...c})), eCatId='food';
 let monoTimer=null;
@@ -766,6 +805,9 @@ function checkMonthEnd(state) {
     
     if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
     state.inventory.materials += mats;
+    if (rem > 0) {
+      state.character.lifetimeSaved = (state.character.lifetimeSaved || 0) + rem;
+    }
     
     state.history.push({...state.currentMonth});
 
@@ -995,7 +1037,7 @@ function startGame(){
     showErr('re3', `カテゴリ予算の合計が月の変動費と一致しません！`);
     return;
   }
-  const character={name:nm,avatar:rAvatar,monthlyBudget:bv,categories:cats};
+  const character={name:nm,avatar:rAvatar,monthlyBudget:bv,categories:cats,lifetimeSaved:0};
   const now=new Date();
   const state={
     character,
@@ -1018,6 +1060,14 @@ function renderHome(){
   
   // Backward compatibility
   if(!state.inventory) { state.inventory = {materials:0, unlockedChips:[]}; state.baseLevel = 1; save(state); }
+  if(state.character.lifetimeSaved === undefined) {
+    let ls = 0;
+    if (state.history && state.history.length > 0) {
+      state.history.forEach(h => { if (h.currentHp > 0) ls += h.currentHp; });
+    }
+    state.character.lifetimeSaved = ls;
+    save(state);
+  }
   
   const {character:ch,currentMonth:cm}=state;
   const spent=cm.baseHp-cm.currentHp;
@@ -1313,6 +1363,41 @@ function showChip(id) {
   }
 }
 
+function showBadgesModal() {
+  const state = load();
+  if(!state || !state.character) return;
+  const total = state.character.lifetimeSaved || 0;
+  el('bmTotal').textContent = '¥' + total.toLocaleString('ja-JP');
+  
+  const list = el('bmList');
+  list.innerHTML = '';
+  
+  LIFETIME_BADGES.forEach(b => {
+    const isUnlocked = total >= b.req;
+    const div = document.createElement('div');
+    div.style.padding = '12px';
+    div.style.borderRadius = '8px';
+    div.style.border = '1px solid ' + (isUnlocked ? 'var(--gold)' : 'var(--border)');
+    div.style.background = isUnlocked ? 'rgba(255,215,0,0.05)' : 'var(--card2)';
+    div.style.display = 'flex';
+    div.style.gap = '12px';
+    div.style.alignItems = 'center';
+    div.style.opacity = isUnlocked ? '1' : '0.5';
+    
+    div.innerHTML = `
+      <div style="font-size:28px; width:40px; text-align:center; filter:${isUnlocked ? 'drop-shadow(0 0 5px rgba(255,215,0,0.5))' : 'none'};">${isUnlocked ? b.icon : '🔒'}</div>
+      <div style="flex:1;">
+        <div style="font-weight:700; color:${isUnlocked ? 'var(--gold)' : 'var(--txt2)'}; margin-bottom:4px; font-size:14px;">${isUnlocked ? b.title : '???'}</div>
+        <div style="font-size:10px; color:var(--txt3); margin-bottom:4px;">条件: 累計 ¥${b.req.toLocaleString('ja-JP')}</div>
+        <div style="font-size:11px; color:var(--txt); line-height:1.4;">${isUnlocked ? b.desc : '条件を満たすと解除されます。'}</div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  
+  el('badgesModal').style.display = 'flex';
+}
+
 // ─── HISTORY ──────────────────────────────────────────────────
 let _histIdx = 0; // 0=current month, 1=1 month ago, etc.
 
@@ -1364,6 +1449,50 @@ function renderHist(){
   el('hiCnt').textContent=expenses.length+'回';
   el('hiAvg').textContent=expenses.length>0?Y(Math.floor(totalSpent/expenses.length)):'—';
   el('hiMax').textContent=expenses.length>0?Y(Math.max(...expenses.map(e=>e.amount))):'—';
+
+  // ―― Heatmap (Defense Log) ――
+  const hm = el('hiHeatmap');
+  const hmTip = el('hiHeatTip');
+  hmTip.innerHTML = 'タップして詳細を表示';
+  const daysInCm = new Date(cm.year, cm.month, 0).getDate();
+  const dailyTarget = cm.baseHp / daysInCm;
+  
+  const dailySums = new Array(daysInCm + 1).fill(0);
+  expenses.forEach(e => {
+    const d = new Date(e.date).getDate();
+    dailySums[d] += e.amount;
+  });
+  
+  const today = new Date();
+  const currentDay = (cm.year === today.getFullYear() && cm.month === today.getMonth() + 1) ? today.getDate() : daysInCm;
+  
+  hm.innerHTML = '';
+  for(let d=1; d<=daysInCm; d++) {
+    const box = document.createElement('div');
+    box.style.aspectRatio = '1';
+    box.style.borderRadius = '4px';
+    box.style.cursor = 'pointer';
+    
+    if (d > currentDay) {
+      box.style.background = 'var(--card2)';
+      box.style.opacity = '0.5';
+    } else {
+      const amt = dailySums[d];
+      if (amt === 0) {
+        box.style.background = 'var(--green)';
+        box.style.boxShadow = '0 0 8px rgba(62,207,142,0.3)';
+      } else if (amt <= dailyTarget * 1.2) {
+        box.style.background = 'var(--yellow)';
+      } else {
+        box.style.background = 'var(--red)';
+      }
+    }
+    
+    box.onclick = () => {
+      hmTip.innerHTML = `<strong style="color:var(--gold);">${cm.month}/${d}</strong>: ${d > currentDay ? '未到達' : (dailySums[d]===0 ? '✨ 無傷（支出¥0）' : '消費 ¥' + dailySums[d].toLocaleString('ja-JP'))}`;
+    };
+    hm.appendChild(box);
+  }
 
   const totals={};expenses.forEach(e=>{totals[e.categoryId]=(totals[e.categoryId]||0)+e.amount;});
   const cc=el('hiCatCard'),bars=el('hiCatBars');
