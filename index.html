@@ -606,7 +606,7 @@
         <span style="width:8px;height:8px;background:var(--red);display:inline-block;border-radius:2px;margin-left:4px;"></span>被弾大
       </div>
     </div>
-    <div id="hiHeatmap" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+    <div id="hiHeatmap" style="display:grid;grid-template-columns:auto repeat(7,1fr);gap:4px;"></div>
     <div id="hiHeatTip" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:12px;min-height:16px;">タップして詳細を表示</div>
   </div>
 
@@ -1544,32 +1544,68 @@ function renderHist(){
   const today = new Date();
   const currentDay = (cm.year === today.getFullYear() && cm.month === today.getMonth() + 1) ? today.getDate() : daysInCm;
   
+  hm.style.gridTemplateColumns = 'auto repeat(7, 1fr)';
   hm.innerHTML = '';
-  for(let d=1; d<=daysInCm; d++) {
-    const box = document.createElement('div');
-    box.style.aspectRatio = '1';
-    box.style.borderRadius = '4px';
-    box.style.cursor = 'pointer';
+  
+  const daysOfWeek = ['日', '月', '火', '水', '木', '金', '土'];
+  hm.appendChild(document.createElement('div'));
+  daysOfWeek.forEach(day => {
+    const lbl = document.createElement('div');
+    lbl.textContent = day;
+    lbl.style.fontSize = '10px';
+    lbl.style.color = 'var(--txt3)';
+    lbl.style.textAlign = 'center';
+    hm.appendChild(lbl);
+  });
+  
+  const firstDay = new Date(cm.year, cm.month - 1, 1).getDay();
+  let currentDayNum = 1;
+  let weekNum = 1;
+  
+  while (currentDayNum <= daysInCm) {
+    const wLbl = document.createElement('div');
+    wLbl.textContent = 'W' + weekNum;
+    wLbl.style.fontSize = '10px';
+    wLbl.style.color = 'var(--txt3)';
+    wLbl.style.display = 'flex';
+    wLbl.style.alignItems = 'center';
+    wLbl.style.justifyContent = 'flex-end';
+    wLbl.style.paddingRight = '4px';
+    hm.appendChild(wLbl);
     
-    if (d > currentDay) {
-      box.style.background = 'var(--card2)';
-      box.style.opacity = '0.5';
-    } else {
-      const amt = dailySums[d];
-      if (amt === 0) {
-        box.style.background = 'var(--green)';
-        box.style.boxShadow = '0 0 8px rgba(62,207,142,0.3)';
-      } else if (amt <= dailyTarget * 1.2) {
-        box.style.background = 'var(--yellow)';
+    for (let i = 0; i < 7; i++) {
+      if ((weekNum === 1 && i < firstDay) || currentDayNum > daysInCm) {
+        const empty = document.createElement('div');
+        hm.appendChild(empty);
       } else {
-        box.style.background = 'var(--red)';
+        const d = currentDayNum++;
+        const box = document.createElement('div');
+        box.style.aspectRatio = '1';
+        box.style.borderRadius = '4px';
+        box.style.cursor = 'pointer';
+        
+        if (d > currentDay) {
+          box.style.background = 'var(--card2)';
+          box.style.opacity = '0.5';
+        } else {
+          const amt = dailySums[d];
+          if (amt === 0) {
+            box.style.background = 'var(--green)';
+            box.style.boxShadow = '0 0 8px rgba(62,207,142,0.3)';
+          } else if (amt <= dailyTarget * 1.2) {
+            box.style.background = 'var(--yellow)';
+          } else {
+            box.style.background = 'var(--red)';
+          }
+        }
+        
+        box.onclick = () => {
+          hmTip.innerHTML = `<strong style="color:var(--gold);">${cm.month}/${d}</strong>: ${d > currentDay ? '未到達' : (dailySums[d]===0 ? '✨ 無傷（支出¥0）' : '消費 ¥' + dailySums[d].toLocaleString('ja-JP'))}`;
+        };
+        hm.appendChild(box);
       }
     }
-    
-    box.onclick = () => {
-      hmTip.innerHTML = `<strong style="color:var(--gold);">${cm.month}/${d}</strong>: ${d > currentDay ? '未到達' : (dailySums[d]===0 ? '✨ 無傷（支出¥0）' : '消費 ¥' + dailySums[d].toLocaleString('ja-JP'))}`;
-    };
-    hm.appendChild(box);
+    weekNum++;
   }
 
   const totals={};expenses.forEach(e=>{totals[e.categoryId]=(totals[e.categoryId]||0)+e.amount;});
