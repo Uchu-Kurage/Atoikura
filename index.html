@@ -871,10 +871,21 @@ function go(name){
 // ─── UTILS ───────────────────────────────────────────────────
 function Y(n){return '¥'+Number(n).toLocaleString('ja-JP');}
 function hpPct(cur,base){return Math.max(0,Math.min(100,(cur/base)*100));}
-function hpCol(p){return p>60?'#3ecf8e':p>30?'#f5c542':'#e04444';}
-function cst(p,status){
+function hpCol(cs){return cs==='healthy'?'#3ecf8e':cs==='tired'?'#f5c542':'#e04444';}
+function cst(p,status,daysLeft,daysInM){
   if(status==='cleared')return 'victory';
-  if(p<=0)return 'defeated'; if(p<=20)return 'critical'; if(p<=50)return 'tired';
+  if(p<=0)return 'defeated';
+  if(daysLeft!==undefined && daysInM!==undefined){
+    const currentDay = Math.min(daysInM, daysInM - daysLeft + 1);
+    const nextMarkerDay = Math.ceil(currentDay / 7) * 7;
+    const targetMarkerPct = Math.max(0, ((daysInM - nextMarkerDay) / daysInM) * 100);
+    const weekBudgetPct = (7 / daysInM) * 100;
+    const diff = p - targetMarkerPct;
+    if(diff <= weekBudgetPct * 0.2) return 'critical';
+    if(diff <= weekBudgetPct * 0.5) return 'tired';
+    return 'healthy';
+  }
+  if(p<=20)return 'critical'; if(p<=50)return 'tired';
   return 'healthy';
 }
 function daysLeft(y,m){
@@ -1007,12 +1018,11 @@ function renderHome(){
   const {character:ch,currentMonth:cm}=state;
   const spent=cm.baseHp-cm.currentHp;
   const pct=hpPct(cm.currentHp,cm.baseHp);
-  const cs=cst(pct,cm.status);
-  const ci=CSTATE[cs];
-  const col=hpCol(pct);
   const days=daysLeft(cm.year,cm.month);
-
   const daysInM = new Date(cm.year, cm.month, 0).getDate();
+  const cs=cst(pct,cm.status,days,daysInM);
+  const ci=CSTATE[cs];
+  const col=hpCol(cs);
   const marksBox = el('hHpMarks');
   marksBox.innerHTML = '';
   // 7日ごとの区切り線を追加（右から左へ消費されるため、右側から7日分の位置に線を引く）
