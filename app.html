@@ -400,6 +400,7 @@
     <div style="margin-top:16px;text-align:left;font-size:12px;color:var(--txt3);background:var(--bg);padding:12px;border-radius:8px;">
       <div class="fbet mb8"><span id="meBonusLbl">クリアボーナス</span><span id="meBonusVal"></span></div>
       <div class="fbet mb8"><span id="meWeeklyLbl">週間防衛達成ボーナス</span><span id="meWeeklyVal" style="color:var(--gold);"></span></div>
+      <div class="fbet mb8"><span id="meCatLbl">カテゴリ防衛達成ボーナス</span><span id="meCatVal" style="color:var(--gold);"></span></div>
       <div class="fbet"><span id="meSurplusLbl">余剰エネルギー還元</span><span id="meSurplusVal"></span></div>
     </div>
     <p style="font-size:12px;color:var(--txt2);margin-top:16px;">これで部屋を片付け（アップグレード）しましょう！</p>
@@ -609,6 +610,7 @@
       <div class="fbet"><span style="font-size:12px;color:var(--txt2);">最終防衛残高</span><span id="hiResHp" style="font-size:14px;font-weight:700;"></span></div>
       <div class="fbet"><span style="font-size:12px;color:var(--txt2);">クリアボーナス</span><span id="hiResBonus" style="font-size:14px;font-weight:700;"></span></div>
       <div class="fbet"><span style="font-size:12px;color:var(--txt2);">週間達成ボーナス</span><span id="hiResWeekly" style="font-size:14px;font-weight:700;color:var(--gold);"></span></div>
+      <div class="fbet"><span style="font-size:12px;color:var(--txt2);">カテゴリ達成ボーナス</span><span id="hiResCat" style="font-size:14px;font-weight:700;color:var(--gold);"></span></div>
       <div class="fbet"><span style="font-size:12px;color:var(--txt2);">余剰還元資材</span><span id="hiResMats" style="font-size:14px;font-weight:700;"></span></div>
       <div style="height:1px;background:var(--border);margin:4px 0;"></div>
       <div class="fbet"><span style="font-size:12px;color:var(--txt2);">獲得資材計</span><span id="hiResTotalMats" style="font-size:16px;font-weight:700;color:var(--gold);"></span></div>
@@ -867,7 +869,27 @@ function checkMonthEnd(state) {
       }
     });
     
-    mats += weeklyBonusMats;
+    // Category clearance bonus logic
+    let catBonusMats = 0;
+    let clearedCatsCount = 0;
+    let activeCatsCount = 0;
+    const catTotals = {};
+    state.currentMonth.expenses.forEach(e => {
+      catTotals[e.categoryId] = (catTotals[e.categoryId] || 0) + e.amount;
+    });
+    
+    state.character.categories.forEach(cat => {
+      if (cat.limit > 0) {
+        activeCatsCount++;
+        const spent = catTotals[cat.id] || 0;
+        if (spent <= cat.limit) {
+          catBonusMats += 200;
+          clearedCatsCount++;
+        }
+      }
+    });
+    
+    mats += weeklyBonusMats + catBonusMats;
 
     if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
     state.inventory.materials += mats;
@@ -875,7 +897,7 @@ function checkMonthEnd(state) {
       state.character.lifetimeSaved = (state.character.lifetimeSaved || 0) + rem;
     }
     
-    state.history.push({...state.currentMonth, weeklyBonusMats}); // Save for history reference
+    state.history.push({...state.currentMonth, weeklyBonusMats, catBonusMats}); // Save for history reference
 
     const carryover = state.character.carryover || false;
     const carryAmt = (carryover && rem > 0) ? rem : 0;
@@ -889,7 +911,7 @@ function checkMonthEnd(state) {
       expenses: [], checkpoints: [], status: 'active'
     };
     save(state);
-    return { mats, carryAmt, weeklyBonusMats, clearedWeeksCount, totalWeeks: weeks.length, rem };
+    return { mats, carryAmt, weeklyBonusMats, clearedWeeksCount, totalWeeks: weeks.length, rem, catBonusMats, clearedCatsCount, activeCatsCount };
   }
   return null;
 }
@@ -905,6 +927,7 @@ function showMonthEndModal(mend) {
   
   el('meBonusVal').textContent = bonus > 0 ? '+1000' : '0';
   el('meWeeklyVal').textContent = mend.weeklyBonusMats > 0 ? '+' + mend.weeklyBonusMats + ` (${mend.clearedWeeksCount}/${mend.totalWeeks}週)` : '0';
+  el('meCatVal').textContent = mend.catBonusMats > 0 ? '+' + mend.catBonusMats + ` (${mend.clearedCatsCount}/${mend.activeCatsCount}項目)` : '0';
   el('meSurplusVal').textContent = surplusMats > 0 ? '+' + surplusMats : '0';
   
   const cc = el('meCarryCard');
@@ -1607,13 +1630,15 @@ function renderHist(){
     const bonus = rem >= 0 ? 1000 : 0;
     const mats = rem > 0 ? Math.floor(rem * 0.1) : 0;
     const weeklyBonus = cm.weeklyBonusMats || 0;
+    const catBonus = cm.catBonusMats || 0;
     
     el('hiResHp').textContent = Y(rem);
     el('hiResHp').style.color = rem >= 0 ? 'var(--green)' : 'var(--red)';
     el('hiResBonus').textContent = bonus > 0 ? '+1000 🔩' : '0 🔩';
     el('hiResWeekly').textContent = weeklyBonus > 0 ? '+' + weeklyBonus + ' 🔩' : '0 🔩';
+    el('hiResCat').textContent = catBonus > 0 ? '+' + catBonus + ' 🔩' : '0 🔩';
     el('hiResMats').textContent = '+' + mats + ' 🔩';
-    el('hiResTotalMats').textContent = '+' + (bonus + mats + weeklyBonus) + ' 🔩';
+    el('hiResTotalMats').textContent = '+' + (bonus + mats + weeklyBonus + catBonus) + ' 🔩';
     
     const nextMonth = _histIdx === 1 ? state.currentMonth : state.history[_histIdx - 1];
     const actualCarry = nextMonth ? (nextMonth.carryoverBonus || 0) : 0;
