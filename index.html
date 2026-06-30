@@ -597,6 +597,19 @@
     </div>
   </div>
 
+  <div class="card mb16" id="hiResultCard">
+    <p class="stitle" style="color:var(--gold);">月間サバイバル精算結果</p>
+    <div id="hiResultPending" style="font-size:12px;color:var(--txt3);text-align:center;padding:8px 0;">現在進行中のミッションです。<br>月末に精算されます。</div>
+    <div id="hiResultData" style="display:none; flex-direction:column; gap:8px;">
+      <div class="fbet"><span style="font-size:12px;color:var(--txt2);">最終防衛残高</span><span id="hiResHp" style="font-size:14px;font-weight:700;"></span></div>
+      <div class="fbet"><span style="font-size:12px;color:var(--txt2);">クリアボーナス</span><span id="hiResBonus" style="font-size:14px;font-weight:700;"></span></div>
+      <div class="fbet"><span style="font-size:12px;color:var(--txt2);">余剰還元資材</span><span id="hiResMats" style="font-size:14px;font-weight:700;"></span></div>
+      <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+      <div class="fbet"><span style="font-size:12px;color:var(--txt2);">獲得資材計</span><span id="hiResTotalMats" style="font-size:16px;font-weight:700;color:var(--gold);"></span></div>
+      <div class="fbet" id="hiResCarryBox" style="display:none;"><span style="font-size:12px;color:var(--txt2);">翌月への繰り越し</span><span id="hiResCarry" style="font-size:14px;font-weight:700;color:var(--green);"></span></div>
+    </div>
+  </div>
+
   <div class="card mb16">
     <div class="fbet" style="margin-bottom:12px;">
       <p class="stitle" style="margin-bottom:0;">防衛ログ</p>
@@ -1527,6 +1540,35 @@ function renderHist(){
   el('hiCnt').textContent=expenses.length+'回';
   el('hiAvg').textContent=expenses.length>0?Y(Math.floor(totalSpent/expenses.length)):'—';
   el('hiMax').textContent=expenses.length>0?Y(Math.max(...expenses.map(e=>e.amount))):'—';
+
+  // ―― Monthly Settlement Result ――
+  if (isCurrentMonth) {
+    el('hiResultPending').style.display = 'block';
+    el('hiResultData').style.display = 'none';
+  } else {
+    el('hiResultPending').style.display = 'none';
+    el('hiResultData').style.display = 'flex';
+    
+    const rem = cm.currentHp || 0;
+    const bonus = rem >= 0 ? 1000 : 0;
+    const mats = rem > 0 ? Math.floor(rem * 0.1) : 0;
+    
+    el('hiResHp').textContent = Y(rem);
+    el('hiResHp').style.color = rem >= 0 ? 'var(--green)' : 'var(--red)';
+    el('hiResBonus').textContent = bonus > 0 ? '+1000 🔩' : '0 🔩';
+    el('hiResMats').textContent = '+' + mats + ' 🔩';
+    el('hiResTotalMats').textContent = '+' + (bonus + mats) + ' 🔩';
+    
+    const nextMonth = _histIdx === 1 ? state.currentMonth : state.history[_histIdx - 1];
+    const actualCarry = nextMonth ? (nextMonth.carryoverBonus || 0) : 0;
+    
+    if (actualCarry > 0) {
+      el('hiResCarryBox').style.display = 'flex';
+      el('hiResCarry').textContent = '+' + Y(actualCarry);
+    } else {
+      el('hiResCarryBox').style.display = 'none';
+    }
+  }
 
   // ―― Heatmap (Defense Log) ――
   const hm = el('hiHeatmap');
