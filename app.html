@@ -532,6 +532,8 @@
     <div class="sc"><div class="slbl">残り日数</div><div class="sval" id="hDays" style="color:var(--yellow);"></div></div>
     <div class="sc"><div class="slbl">今月の消費</div><div class="sval" id="hSpent" style="font-size:16px;color:var(--red);"></div></div>
     <div class="sc"><div class="slbl">1日の許容量</div><div class="sval" id="hDaily" style="font-size:16px;"></div></div>
+    <div class="sc"><div class="slbl">今週使える</div><div class="sval" id="hWeekLeft" style="font-size:16px;color:var(--green);"></div></div>
+    <div class="sc"><div class="slbl">今週使った</div><div class="sval" id="hWeekSpent" style="font-size:16px;color:var(--red);"></div></div>
   </div>
 
   <!-- 参考記録サマリー（ゲーム対象外） -->
@@ -1355,6 +1357,15 @@ function renderHome(){
   el('hDays').textContent=days+'日';
   el('hSpent').textContent=Y(spent);
   el('hDaily').textContent=days>0?Y(Math.floor(cm.currentHp/days)):'—';
+
+  // 今週の集計（ISO週。checkpoint と同じ getWeekStr で「今週」を判定）
+  const nowWk=getWeekStr(new Date().toISOString());
+  const weekSpent=cm.expenses.filter(e=>getWeekStr(e.date)===nowWk).reduce((s,e)=>s+e.amount,0);
+  const weekBudget=Math.floor(cm.baseHp/4); // 週予算＝コア容量の1/4（週次評価と同じ基準）
+  const weekLeft=weekBudget-weekSpent;
+  el('hWeekSpent').textContent=Y(weekSpent);
+  el('hWeekLeft').textContent=Y(weekLeft);
+  el('hWeekLeft').style.color=weekLeft<0?'var(--red)':'var(--green)';
 
   // 参考記録サマリー（ゲーム対象外）
   const fixedTotal = sumRef(ch.fixedCosts);
