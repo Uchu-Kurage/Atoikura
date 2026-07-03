@@ -1360,9 +1360,23 @@ function renderHome(){
 
   // 今週の集計（ISO週。checkpoint と同じ getWeekStr で「今週」を判定）
   const nowWk=getWeekStr(new Date().toISOString());
+  // 週ごとに今月分の日数を集計し、月予算を日数按分する（月をまたぐ週にも対応）
+  const wkDays={};
+  for(let dnum=1; dnum<=daysInM; dnum++){
+    const ws=getWeekStr(new Date(cm.year, cm.month-1, dnum).toISOString());
+    wkDays[ws]=(wkDays[ws]||0)+1;
+  }
+  // 今週までに割り当てられた累積予算（前週までの繰越・借金を含む）
+  let cumBudgetDays=0;
+  for(const ws in wkDays){ if(ws<=nowWk) cumBudgetDays+=wkDays[ws]; }
+  const cumBudget=cm.baseHp*(cumBudgetDays/daysInM);
+  // 今週までの累積支出
+  const cumSpent=cm.expenses.filter(e=>getWeekStr(e.date)<=nowWk).reduce((s,e)=>s+e.amount,0);
+  // 今週使える＝今週までの累積予算 − 累積支出
+  //   前週の余り＝繰越（プラス）、使い過ぎ＝借金（マイナス）として今週分に反映される
+  const weekLeft=Math.floor(cumBudget-cumSpent);
+  // 今週使った＝今週分の支出のみ
   const weekSpent=cm.expenses.filter(e=>getWeekStr(e.date)===nowWk).reduce((s,e)=>s+e.amount,0);
-  const weekBudget=Math.floor(cm.baseHp/4); // 週予算＝コア容量の1/4（週次評価と同じ基準）
-  const weekLeft=weekBudget-weekSpent;
   el('hWeekSpent').textContent=Y(weekSpent);
   el('hWeekLeft').textContent=Y(weekLeft);
   el('hWeekLeft').style.color=weekLeft<0?'var(--red)':'var(--green)';
