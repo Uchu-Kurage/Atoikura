@@ -938,7 +938,7 @@ function checkMonthEnd(state) {
     const oldY = state.currentMonth.year;
     const oldM = state.currentMonth.month;
     const daysInOldM = new Date(oldY, oldM, 0).getDate();
-    const firstDay = new Date(oldY, oldM - 1, 1).getDay();
+    const firstDay = (new Date(oldY, oldM - 1, 1).getDay() + 6) % 7;
     
     let weeks = [];
     let curWk = { days: 0, expenses: 0 };
@@ -1820,7 +1820,7 @@ function renderHist(){
   hm.style.gridTemplateColumns = 'auto repeat(7, 1fr)';
   hm.innerHTML = '';
   
-  const daysOfWeek = ['日', '月', '火', '水', '木', '金', '土'];
+  const daysOfWeek = ['月', '火', '水', '木', '金', '土', '日'];
   hm.appendChild(document.createElement('div'));
   daysOfWeek.forEach(day => {
     const lbl = document.createElement('div');
@@ -1831,7 +1831,7 @@ function renderHist(){
     hm.appendChild(lbl);
   });
   
-  const firstDay = new Date(cm.year, cm.month - 1, 1).getDay();
+  const firstDay = (new Date(cm.year, cm.month - 1, 1).getDay() + 6) % 7;
   let currentDayNum = 1;
   let weekNum = 1;
   
