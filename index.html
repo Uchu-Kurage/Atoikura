@@ -319,6 +319,75 @@
   </div>
 </div>
 
+<!-- ═══════════════ REFERENCE RECORDS (参考記録) ═══════════════ -->
+<div class="scr" id="scr-reference">
+  <div class="flex g12 mb24" style="align-items:center;">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--txt2);font-size:26px;cursor:pointer;padding:4px;touch-action:manipulation;">←</button>
+    <div>
+      <p class="gtitle" style="font-size:8px;">家計全体を把握する</p>
+      <h1 style="font-size:18px;font-weight:700;margin-top:4px;">📋 参考記録</h1>
+    </div>
+  </div>
+
+  <div class="card mb16" style="border-color:rgba(74,158,255,.25);">
+    <p style="font-size:12px;color:var(--txt2);line-height:1.7;">
+      固定費・臨時費は<span style="color:#4a9eff;font-weight:700;">コアエネルギー（ゲーム）には影響しません</span>。<br>
+      家計全体を把握するための参考値として記録できます。ゲーム性をもたせる対象はあくまで変動費（＝コアエネルギー）です。
+    </p>
+  </div>
+
+  <!-- 固定費 -->
+  <div class="card mb16">
+    <h2 style="font-size:15px;font-weight:700;margin-bottom:4px;">🏠 固定費（毎月）</h2>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:16px;line-height:1.6;">家賃・通信費・サブスクなど、毎月ほぼ一定の支出。一度登録すると毎月の参考値として扱われます。</p>
+    <div id="fixedList" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input class="inp" type="text" id="fixName" placeholder="項目名（例：家賃）" maxlength="20" style="flex:1;">
+      <div style="position:relative;width:120px;flex-shrink:0;">
+        <input class="inp" type="number" id="fixAmt" placeholder="0" min="0" inputmode="numeric" style="padding-right:26px;">
+        <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--txt3);">円</span>
+      </div>
+    </div>
+    <button class="btn btn-s" onclick="addFixed()" style="font-size:13px;">＋ 固定費を追加</button>
+    <div class="ebox" id="fixErr" style="display:none;margin-top:8px;"></div>
+    <div class="fbet" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+      <span style="font-size:12px;color:var(--txt2);">固定費 合計</span>
+      <span id="fixTotal" style="font-size:16px;font-weight:700;">¥0</span>
+    </div>
+  </div>
+
+  <!-- 臨時費 -->
+  <div class="card mb16">
+    <h2 style="font-size:15px;font-weight:700;margin-bottom:4px;">🎁 臨時費（今月）</h2>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:16px;line-height:1.6;">家電の買い替え・冠婚葬祭・旅行など、一時的で不定期な支出。今月分として記録され、月末に履歴へ保存されます。</p>
+    <div id="tempList" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input class="inp" type="text" id="tmpName" placeholder="項目名（例：冷蔵庫）" maxlength="20" style="flex:1;">
+      <div style="position:relative;width:120px;flex-shrink:0;">
+        <input class="inp" type="number" id="tmpAmt" placeholder="0" min="0" inputmode="numeric" style="padding-right:26px;">
+        <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--txt3);">円</span>
+      </div>
+    </div>
+    <input class="inp" type="date" id="tmpDate" style="margin-bottom:8px;">
+    <button class="btn btn-s" onclick="addTemp()" style="font-size:13px;">＋ 臨時費を追加</button>
+    <div class="ebox" id="tmpErr" style="display:none;margin-top:8px;"></div>
+    <div class="fbet" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+      <span style="font-size:12px;color:var(--txt2);">今月の臨時費 合計</span>
+      <span id="tmpTotal" style="font-size:16px;font-weight:700;">¥0</span>
+    </div>
+  </div>
+
+  <!-- 参考：今月の総支出 -->
+  <div class="card mb16" style="border-color:rgba(245,197,66,.25);">
+    <p class="stitle">📊 今月の総支出（参考）</p>
+    <div class="fbet mb8"><span style="font-size:12px;color:var(--txt2);">変動費（消費済み）</span><span id="refVar" style="font-size:14px;font-weight:700;color:var(--red);">¥0</span></div>
+    <div class="fbet mb8"><span style="font-size:12px;color:var(--txt2);">固定費</span><span id="refFix" style="font-size:14px;font-weight:700;">¥0</span></div>
+    <div class="fbet mb8"><span style="font-size:12px;color:var(--txt2);">臨時費</span><span id="refTmp" style="font-size:14px;font-weight:700;">¥0</span></div>
+    <div style="height:1px;background:var(--border);margin:4px 0 8px;"></div>
+    <div class="fbet"><span style="font-size:13px;font-weight:700;">合計</span><span id="refSum" style="font-size:18px;font-weight:700;color:var(--yellow);">¥0</span></div>
+  </div>
+</div>
+
 
 <!-- ═══════════════ SETTINGS MENU MODAL ═══════════════ -->
 <div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:3000;padding:24px;flex-direction:column;justify-content:flex-end;">
@@ -465,6 +534,29 @@
     <div class="sc"><div class="slbl">1日の許容量</div><div class="sval" id="hDaily" style="font-size:16px;"></div></div>
   </div>
 
+  <!-- 参考記録サマリー（ゲーム対象外） -->
+  <div class="card mb16" style="padding:14px;border-color:rgba(74,158,255,.25);">
+    <div class="fbet mb8">
+      <p style="font-size:11px;font-weight:700;color:var(--txt2);">📋 参考記録（ゲーム対象外）</p>
+      <button class="btn btn-s" onclick="initReference()" style="padding:4px 10px;font-size:11px;width:auto;">管理 →</button>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <div style="flex:1;text-align:center;">
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:2px;">固定費</div>
+        <div id="hFixed" style="font-size:14px;font-weight:700;">¥0</div>
+      </div>
+      <div style="flex:1;text-align:center;">
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:2px;">今月の臨時費</div>
+        <div id="hTemp" style="font-size:14px;font-weight:700;">¥0</div>
+      </div>
+      <div style="flex:1;text-align:center;">
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:2px;">今月の総支出</div>
+        <div id="hTotal" style="font-size:14px;font-weight:700;color:var(--yellow);">¥0</div>
+      </div>
+    </div>
+    <p style="font-size:10px;color:var(--txt3);margin-top:10px;line-height:1.5;">※固定費・臨時費はコアエネルギー（ゲーム）に影響しません。家計全体を把握するための参考値です。</p>
+  </div>
+
   <div id="hDmgBtn" style="margin-bottom:14px;">
     <button class="btn btn-r" onclick="go('expense')" style="font-size:16px;padding:16px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);box-shadow:0 0 20px rgba(62,207,142,.25);">🔫 脅威を撃退する（支出）</button>
   </div>
@@ -601,6 +693,15 @@
       <div class="sc"><div class="slbl">1回平均</div><div class="sval" id="hiAvg" style="font-size:16px;"></div></div>
       <div class="sc"><div class="slbl">最大消費</div><div class="sval" id="hiMax" style="font-size:16px;color:var(--red);"></div></div>
     </div>
+  </div>
+
+  <div class="card mb16" style="border-color:rgba(74,158,255,.25);">
+    <p class="stitle">📋 家計全体（参考・ゲーム対象外）</p>
+    <div class="fbet mb8"><span style="font-size:12px;color:var(--txt2);">変動費（消費）</span><span id="hiRefVar" style="font-size:14px;font-weight:700;color:var(--red);">¥0</span></div>
+    <div class="fbet mb8"><span style="font-size:12px;color:var(--txt2);">固定費</span><span id="hiRefFix" style="font-size:14px;font-weight:700;">¥0</span></div>
+    <div class="fbet mb8"><span style="font-size:12px;color:var(--txt2);">臨時費</span><span id="hiRefTmp" style="font-size:14px;font-weight:700;">¥0</span></div>
+    <div style="height:1px;background:var(--border);margin:4px 0 8px;"></div>
+    <div class="fbet"><span style="font-size:13px;font-weight:700;">総支出 合計</span><span id="hiRefSum" style="font-size:18px;font-weight:700;color:var(--yellow);">¥0</span></div>
   </div>
 
   <div class="card mb16" id="hiResultCard">
@@ -908,7 +1009,7 @@ function checkMonthEnd(state) {
       baseHp: newBase,
       currentHp: newBase,
       carryoverBonus: carryAmt,
-      expenses: [], checkpoints: [], status: 'active'
+      expenses: [], tempExpenses: [], checkpoints: [], status: 'active'
     };
     save(state);
     return { mats, carryAmt, weeklyBonusMats, clearedWeeksCount, totalWeeks: weeks.length, rem, catBonusMats, clearedCatsCount, activeCatsCount };
@@ -1135,13 +1236,13 @@ function startGame(){
     showErr('re3', `カテゴリ予算の合計が月の変動費と一致しません！`);
     return;
   }
-  const character={name:nm,avatar:rAvatar,monthlyBudget:bv,categories:cats,lifetimeSaved:0};
+  const character={name:nm,avatar:rAvatar,monthlyBudget:bv,categories:cats,lifetimeSaved:0,fixedCosts:[]};
   const now=new Date();
   const state={
     character,
     currentMonth:{
       year:now.getFullYear(),month:now.getMonth()+1,
-      baseHp:bv,currentHp:bv,expenses:[],checkpoints:[],status:'active'
+      baseHp:bv,currentHp:bv,expenses:[],tempExpenses:[],checkpoints:[],status:'active'
     },
     inventory: { materials: 0, unlockedChips: [] },
     baseLevel: 1,
@@ -1158,6 +1259,8 @@ function renderHome(){
   
   // Backward compatibility
   if(!state.inventory) { state.inventory = {materials:0, unlockedChips:[]}; state.baseLevel = 1; save(state); }
+  if(!Array.isArray(state.character.fixedCosts)) { state.character.fixedCosts = []; save(state); }
+  if(!Array.isArray(state.currentMonth.tempExpenses)) { state.currentMonth.tempExpenses = []; save(state); }
   if(state.character.lifetimeSaved === undefined) {
     let ls = 0;
     if (state.history && state.history.length > 0) {
@@ -1252,6 +1355,13 @@ function renderHome(){
   el('hDays').textContent=days+'日';
   el('hSpent').textContent=Y(spent);
   el('hDaily').textContent=days>0?Y(Math.floor(cm.currentHp/days)):'—';
+
+  // 参考記録サマリー（ゲーム対象外）
+  const fixedTotal = sumRef(ch.fixedCosts);
+  const tempTotal = sumRef(cm.tempExpenses);
+  el('hFixed').textContent = Y(fixedTotal);
+  el('hTemp').textContent = Y(tempTotal);
+  el('hTotal').textContent = Y(spent + fixedTotal + tempTotal);
 
   const dmg=el('hDmgBtn'),ban=el('hBanner');
   if(cm.status==='cleared'){
@@ -1617,6 +1727,14 @@ function renderHist(){
   el('hiCnt').textContent=expenses.length+'回';
   el('hiAvg').textContent=expenses.length>0?Y(Math.floor(totalSpent/expenses.length)):'—';
   el('hiMax').textContent=expenses.length>0?Y(Math.max(...expenses.map(e=>e.amount))):'—';
+
+  // 家計全体（参考・ゲーム対象外）
+  const hiFixedTotal = sumRef(ch.fixedCosts);
+  const hiTempTotal = sumRef(cm.tempExpenses);
+  el('hiRefVar').textContent = Y(totalSpent);
+  el('hiRefFix').textContent = Y(hiFixedTotal);
+  el('hiRefTmp').textContent = Y(hiTempTotal);
+  el('hiRefSum').textContent = Y(totalSpent + hiFixedTotal + hiTempTotal);
 
   // ―― Monthly Settlement Result ――
   if (isCurrentMonth) {
@@ -2158,6 +2276,105 @@ function saveEditBudget() {
   
   save(state);
   go('home');
+}
+
+// ─── REFERENCE RECORDS (参考記録：固定費・臨時費) ──────────────
+// 固定費・臨時費は「参考値」であり、コアエネルギー（ゲーム）には影響しない。
+function sumRef(arr){ return Array.isArray(arr) ? arr.reduce((s,x)=>s+(Number(x.amount)||0),0) : 0; }
+
+function initReference(){
+  const state=load(); if(!state||!state.character||!state.currentMonth) return;
+  if(!Array.isArray(state.character.fixedCosts)) state.character.fixedCosts=[];
+  if(!Array.isArray(state.currentMonth.tempExpenses)) state.currentMonth.tempExpenses=[];
+  save(state);
+  // 臨時費の日付初期値は今日
+  const today=new Date();
+  el('tmpDate').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  el('fixName').value=''; el('fixAmt').value='';
+  el('tmpName').value=''; el('tmpAmt').value='';
+  hideErr('fixErr'); hideErr('tmpErr');
+  renderRefLists();
+  go('reference');
+}
+
+function renderRefLists(){
+  const state=load(); if(!state) return;
+  const fixed=state.character.fixedCosts||[];
+  const temp=state.currentMonth.tempExpenses||[];
+
+  const fl=el('fixedList');
+  fl.innerHTML = fixed.length ? fixed.map(f=>refRow(f, 'delFixed')).join('')
+    : `<p style="font-size:12px;color:var(--txt3);text-align:center;padding:8px 0;">まだ固定費が登録されていません</p>`;
+
+  const tl=el('tempList');
+  tl.innerHTML = temp.length ? temp.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>refRow(t, 'delTemp', true)).join('')
+    : `<p style="font-size:12px;color:var(--txt3);text-align:center;padding:8px 0;">今月はまだ臨時費が登録されていません</p>`;
+
+  const fixedTotal=sumRef(fixed), tempTotal=sumRef(temp);
+  const varSpent=(state.currentMonth.baseHp||0)-(state.currentMonth.currentHp||0);
+  el('fixTotal').textContent=Y(fixedTotal);
+  el('tmpTotal').textContent=Y(tempTotal);
+  el('refVar').textContent=Y(varSpent);
+  el('refFix').textContent=Y(fixedTotal);
+  el('refTmp').textContent=Y(tempTotal);
+  el('refSum').textContent=Y(varSpent+fixedTotal+tempTotal);
+}
+
+function refRow(item, delFn, withDate){
+  const sub = withDate && item.date ? `<div style="font-size:10px;color:var(--txt3);">${fmtDate(item.date)}</div>` : '';
+  return `<div style="display:flex;align-items:center;gap:10px;background:var(--bg);padding:10px 14px;border-radius:12px;border:1px solid var(--border);margin-bottom:8px;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name||'（無題）'}</div>
+      ${sub}
+    </div>
+    <span style="font-size:14px;font-weight:700;flex-shrink:0;">${Y(Number(item.amount)||0)}</span>
+    <button onclick="${delFn}('${item.id}')" style="background:none;border:none;color:var(--txt3);font-size:18px;cursor:pointer;padding:2px 4px;flex-shrink:0;" title="削除">🗑️</button>
+  </div>`;
+}
+
+function addFixed(){
+  const name=(el('fixName').value||'').trim();
+  const amt=parseInt(el('fixAmt').value,10)||0;
+  if(!name){ showErr('fixErr','項目名を入力してください'); return; }
+  if(amt<1){ showErr('fixErr','金額を正しく入力してください'); return; }
+  hideErr('fixErr');
+  const state=load(); if(!state) return;
+  if(!Array.isArray(state.character.fixedCosts)) state.character.fixedCosts=[];
+  state.character.fixedCosts.push({id:uid(),name,amount:amt});
+  save(state);
+  el('fixName').value=''; el('fixAmt').value='';
+  renderRefLists();
+}
+
+function delFixed(id){
+  const state=load(); if(!state) return;
+  state.character.fixedCosts=(state.character.fixedCosts||[]).filter(f=>f.id!==id);
+  save(state);
+  renderRefLists();
+}
+
+function addTemp(){
+  const name=(el('tmpName').value||'').trim();
+  const amt=parseInt(el('tmpAmt').value,10)||0;
+  if(!name){ showErr('tmpErr','項目名を入力してください'); return; }
+  if(amt<1){ showErr('tmpErr','金額を正しく入力してください'); return; }
+  hideErr('tmpErr');
+  const state=load(); if(!state||!state.currentMonth) return;
+  if(!Array.isArray(state.currentMonth.tempExpenses)) state.currentMonth.tempExpenses=[];
+  let date=new Date().toISOString();
+  const dv=el('tmpDate').value;
+  if(dv){ const [yy,mm,dd]=dv.split('-'); date=new Date(yy,mm-1,dd,12,0,0).toISOString(); }
+  state.currentMonth.tempExpenses.push({id:uid(),name,amount:amt,date});
+  save(state);
+  el('tmpName').value=''; el('tmpAmt').value='';
+  renderRefLists();
+}
+
+function delTemp(id){
+  const state=load(); if(!state||!state.currentMonth) return;
+  state.currentMonth.tempExpenses=(state.currentMonth.tempExpenses||[]).filter(t=>t.id!==id);
+  save(state);
+  renderRefLists();
 }
 
 // ─── BOOT ────────────────────────────────────────────────────
