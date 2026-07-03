@@ -1285,18 +1285,25 @@ function renderHome(){
   const col=hpCol(cs);
   const marksBox = el('hHpMarks');
   marksBox.innerHTML = '';
-  // 7日ごとの区切り線を追加（右から左へ消費されるため、右側から7日分の位置に線を引く）
-  for(let d=7; d<daysInM; d+=7) {
-    const leftPct = ((daysInM - d) / daysInM) * 100;
-    const line = document.createElement('div');
-    line.style.position = 'absolute';
-    line.style.left = leftPct + '%';
-    line.style.top = '0';
-    line.style.bottom = '0';
-    line.style.width = '1px';
-    line.style.borderLeft = '1px dashed rgba(255,255,255,0.4)';
-    line.style.zIndex = '2';
-    marksBox.appendChild(line);
+  // ISO週（今週使える金額の計算と同じ getWeekStr 基準）の境界に区切り線を引く
+  // ゲージは右端＝月初・左端＝月末で右から左へ消費されるため、境界日の左側位置に線を引く
+  let prevWs = null;
+  for(let dnum=1; dnum<=daysInM; dnum++) {
+    const ws = getWeekStr(new Date(cm.year, cm.month-1, dnum).toISOString());
+    if(prevWs !== null && ws !== prevWs) {
+      // dnum-1 日目の終わり（＝週の境界）に線を引く
+      const leftPct = ((daysInM - (dnum-1)) / daysInM) * 100;
+      const line = document.createElement('div');
+      line.style.position = 'absolute';
+      line.style.left = leftPct + '%';
+      line.style.top = '0';
+      line.style.bottom = '0';
+      line.style.width = '1px';
+      line.style.borderLeft = '1px dashed rgba(255,255,255,0.4)';
+      line.style.zIndex = '2';
+      marksBox.appendChild(line);
+    }
+    prevWs = ws;
   }
 
   // Player name moved to history screen
