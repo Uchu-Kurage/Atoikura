@@ -1718,16 +1718,24 @@ function navHist(delta) {
   renderHist();
 }
 
-function getWeekLabel(weekStr, expenses) {
+function getWeekLabel(weekStr, expenses, mYear, mMonth) {
   const [yearStr, wStr] = weekStr.split('-W');
   const year = parseInt(yearStr), week = parseInt(wStr);
   const jan4 = new Date(year, 0, 4);
   const startOfW1 = new Date(jan4);
   startOfW1.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7);
-  const startOfWeek = new Date(startOfW1);
+  let startOfWeek = new Date(startOfW1);
   startOfWeek.setDate(startOfW1.getDate() + (week - 1) * 7);
-  const endOfWeek = new Date(startOfWeek);
+  let endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
+  // For weeks that straddle a month boundary, clamp the label to the
+  // displayed month so it starts from that month's day (e.g. 2/1 not 1/29).
+  if (mYear && mMonth) {
+    const monthStart = new Date(mYear, mMonth - 1, 1);
+    const monthEnd = new Date(mYear, mMonth, 0);
+    if (startOfWeek < monthStart) startOfWeek = monthStart;
+    if (endOfWeek > monthEnd) endOfWeek = monthEnd;
+  }
   const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
   return `${fmt(startOfWeek)}～${fmt(endOfWeek)}`;
 }
@@ -1968,7 +1976,7 @@ function renderHist(){
     const weekTotal = exps.reduce((s,e)=>s+e.amount,0);
     const weekCatTotals = {};
     exps.forEach(e=>{ weekCatTotals[e.categoryId]=(weekCatTotals[e.categoryId]||0)+e.amount; });
-    const label = getWeekLabel(weekStr, exps);
+    const label = getWeekLabel(weekStr, exps, cm.year, cm.month);
     const colId = 'wk_'+wIdx;
 
     // Top3 categories for the week badge row
