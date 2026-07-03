@@ -1361,7 +1361,16 @@ function renderHome(){
   // 今週の集計（ISO週。checkpoint と同じ getWeekStr で「今週」を判定）
   const nowWk=getWeekStr(new Date().toISOString());
   const weekSpent=cm.expenses.filter(e=>getWeekStr(e.date)===nowWk).reduce((s,e)=>s+e.amount,0);
-  const weekBudget=Math.floor(cm.baseHp/4); // 週予算＝コア容量の1/4（週次評価と同じ基準）
+  // 週予算＝月予算×（当週のうち今月に属する日数 ÷ 今月の日数）
+  // 月をまたぐ週は、今月に含まれる日数だけで按分する
+  const wkMon=new Date(); wkMon.setHours(0,0,0,0);
+  wkMon.setDate(wkMon.getDate()-((wkMon.getDay()+6)%7)); // 今週の月曜
+  let weekDaysInMonth=0;
+  for(let i=0;i<7;i++){
+    const dd=new Date(wkMon); dd.setDate(wkMon.getDate()+i);
+    if(dd.getFullYear()===cm.year && dd.getMonth()+1===cm.month) weekDaysInMonth++;
+  }
+  const weekBudget=Math.floor(cm.baseHp*(weekDaysInMonth/daysInM));
   const weekLeft=weekBudget-weekSpent;
   el('hWeekSpent').textContent=Y(weekSpent);
   el('hWeekLeft').textContent=Y(weekLeft);
