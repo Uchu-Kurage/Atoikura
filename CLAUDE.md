@@ -15,9 +15,9 @@ It is a **single-file, framework-less static web app** — all HTML, CSS, and Ja
 - **No lint / test / typecheck commands exist.** Verify changes by loading the app in a browser and exercising the affected screen. To reset state during testing, clear the `kakebo_quest_v1` localStorage key (see below).
 - The `*.svg` files (`next.svg`, `file.svg`, `globe.svg`, `window.svg`) are leftover Next.js template assets and are unused by the app.
 
-## Critical convention: keep the two HTML files in sync
+## Single entry point
 
-`index.html` and `app.html` are **byte-for-byte identical** (both the full 2420-line app). Any change to one **must** be mirrored to the other, or the app will diverge depending on which entry point is served. When editing, apply the same edit to both files (or copy `index.html` → `app.html` after changes).
+The entire app lives in `index.html` — the one and only entry point (`manifest.json`'s `start_url` and `sw.js`'s precache shell both point at it). There is no separate `app.html` to keep in sync anymore.
 
 ## Architecture
 

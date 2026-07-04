@@ -4,14 +4,13 @@
  * NOTE: When the app changes, bump CACHE_VERSION (v1 -> v2 …) so the old
  * precache is discarded on activate and clients pick up the new shell.
  * ------------------------------------------------------------------------ */
-const CACHE_VERSION = 'atoikura-v1';
+const CACHE_VERSION = 'atoikura-v2';
 
-// App shell precached on install. index/app.html are the two (identical)
-// entry points; the rest are the PWA plumbing.
+// App shell precached on install. index.html is the single entry point;
+// the rest are the PWA plumbing.
 const SHELL = [
   './',
   './index.html',
-  './app.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
