@@ -19,9 +19,16 @@ It is a **single-file, framework-less static web app** — all HTML, CSS, and Ja
 
 The entire app lives in `index.html` — the one and only entry point (`manifest.json`'s `start_url` and `sw.js`'s precache shell both point at it). There is no separate `app.html` to keep in sync anymore.
 
+## PWA / service worker
+
+The app is an installable PWA: `index.html` registers `sw.js` on load, and `manifest.json` defines the install metadata (Japanese name, standalone portrait display, icons).
+
+- **`sw.js` caching strategy:** HTML navigations are **network-first** (falling back to cache, then the `index.html` shell, when offline); Google Fonts and same-origin static assets (`images/`, icons) are **cache-first**.
+- **When you change the app shell, bump `CACHE_VERSION` in `sw.js`** (`atoikura-v2` → `v3` …) so the old precache is discarded on activate and clients pick up the new assets. Navigations being network-first means `index.html` edits reach online users regardless, but cached static assets only refresh on a version bump.
+
 ## Architecture
 
-Everything is in the single `<script>` block at the bottom of `index.html` (starts ~line 789). The structure:
+Everything is in the single `<script>` block at the bottom of `index.html` (starts ~line 795). The structure:
 
 - **Screens (SPA):** Each view is a `<div class="scr" id="scr-<name>">`. Only one has the `on` class at a time. Navigation is `go(name)`, which hides all `.scr`, shows `#scr-<name>`, updates the bottom nav, and dispatches to the screen's render function (`renderHome`, `renderBase`, `renderHist`, `initExp`, `playMono`). Screens: `splash`, `mono` (opening monologue), `register`, `edit-budget`, `reference`, `share`, `mend` (month-end result), `cp` (weekly checkpoint), `home`, `expense`, `base`, `history`.
 - **State:** One JSON object persisted under `localStorage` key `SK = 'kakebo_quest_v1'`. Read/write via `load()` / `save(state)`. Shape:
