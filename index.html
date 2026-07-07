@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0d0d0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,7 +31,8 @@
     ::-webkit-scrollbar-thumb{background:var(--brite);border-radius:2px;}
 
     /* ── SCREENS ── */
-    .scr{display:none;max-width:480px;margin:0 auto;padding:20px 16px 100px;min-height:100vh;}
+    .scr{display:none;max-width:480px;margin:0 auto;min-height:100vh;
+      padding:20px 16px calc(100px + env(safe-area-inset-bottom));}
     .scr.on{display:block;}
 
     /* ── CARD ── */
@@ -55,6 +56,15 @@
       outline:none;transition:border-color .2s,box-shadow .2s;}
     .inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(62,207,142,.15);}
     .inp::placeholder{color:var(--txt3);}
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+    input[type=number]{-moz-appearance:textfield;appearance:textfield;}
+
+    /* ── QUICK AMOUNT CHIPS ── */
+    .qamt{flex:1;background:var(--card2);border:1px solid var(--brite);color:var(--txt);
+      border-radius:8px;padding:9px 0;font-size:12px;font-weight:700;font-family:var(--font-u);
+      cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+    .qamt:active{background:var(--brite);}
 
     /* ── GAME TITLE ── */
     .gtitle{font-family:var(--font-g);font-size:10px;letter-spacing:2px;color:var(--green);
@@ -123,7 +133,8 @@
     .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
       width:100%;max-width:480px;background:rgba(21,21,26,.97);
       backdrop-filter:blur(16px);border-top:1px solid var(--border);
-      display:flex;align-items:center;padding:8px 0;z-index:100;}
+      display:flex;align-items:center;z-index:100;
+      padding:8px 0 calc(8px + env(safe-area-inset-bottom));}
     .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
       padding:8px;cursor:pointer;color:var(--txt3);background:none;border:none;
       font-family:var(--font-g);touch-action:manipulation;}
@@ -153,6 +164,10 @@
     .anim-flt{animation:flt 3s ease-in-out infinite;}
     .anim-pls{animation:pls 1s ease-in-out infinite;}
     .anim-slin{animation:slin .35s ease-out;}
+    @media (prefers-reduced-motion: reduce){
+      .anim-flt,.anim-pls,.anim-slin{animation:none !important;}
+      .hpfill,.cbfil,.btn{transition:none;}
+    }
 
     /* ── OVERLAYS ── */
     #dmgOvl{position:fixed;inset:0;pointer-events:none;z-index:999;}
@@ -396,7 +411,7 @@
 
 
 <!-- ═══════════════ SETTINGS MENU MODAL ═══════════════ -->
-<div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:3000;padding:24px;flex-direction:column;justify-content:flex-end;">
+<div id="settingsModal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:3000;padding:24px;flex-direction:column;justify-content:flex-end;">
   <div class="card" style="width:100%;max-width:480px;margin:0 auto;">
     <p style="font-size:11px;font-weight:700;color:var(--txt2);letter-spacing:1px;margin-bottom:16px;">⚙️ 設定メニュー</p>
     <button class="btn btn-g" onclick="document.getElementById('settingsModal').style.display='none';initEditBudget();" style="margin-bottom:10px;">💰 予算設定の変更</button>
@@ -406,7 +421,7 @@
 </div>
 
 <!-- ═══════════════ EDIT EXPENSE MODAL ═══════════════ -->
-<div id="editExpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:3000;padding:16px;overflow-y:auto;">
+<div id="editExpModal" onclick="if(event.target===this)closeEditExp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:3000;padding:16px;overflow-y:auto;">
   <div class="card" style="width:100%;max-width:480px;margin:24px auto;">
     <div class="flex g12" style="align-items:center;margin-bottom:20px;">
       <button onclick="closeEditExp()" style="background:none;border:none;color:var(--txt2);font-size:24px;cursor:pointer;padding:4px;">←</button>
@@ -566,7 +581,7 @@
   </div>
 
   <div id="hDmgBtn" style="margin-bottom:14px;">
-    <button class="btn btn-r" onclick="go('expense')" style="font-size:16px;padding:16px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);box-shadow:0 0 20px rgba(62,207,142,.25);">🔫 脅威を撃退する（支出）</button>
+    <button class="btn btn-g" onclick="go('expense')" style="font-size:16px;padding:16px;">🔫 脅威を撃退する（支出）</button>
   </div>
   <div id="hBanner" style="display:none;" class="card tcen mb16"></div>
 
@@ -602,10 +617,17 @@
     <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.6;">⚠️ 支出を登録するとコアエネルギーを消費して脅威を撃退します。</p>
 
     <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">消費エネルギー（金額）</label>
-    <div style="position:relative;margin-bottom:20px;">
+    <div style="position:relative;margin-bottom:8px;">
       <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--txt2);">¥</span>
       <input class="inp" type="number" id="eAmt" placeholder="0" min="1" inputmode="numeric"
         oninput="updExpPrev()" style="padding-left:36px;font-size:24px;font-weight:700;">
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:20px;">
+      <button type="button" class="qamt" onclick="addAmt(100)">+100</button>
+      <button type="button" class="qamt" onclick="addAmt(500)">+500</button>
+      <button type="button" class="qamt" onclick="addAmt(1000)">+1,000</button>
+      <button type="button" class="qamt" onclick="addAmt(5000)">+5,000</button>
+      <button type="button" class="qamt" onclick="clearAmt()" style="flex:0 0 44px;color:var(--txt2);">C</button>
     </div>
 
     <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:8px;">脅威のカテゴリ</label>
@@ -769,7 +791,7 @@
   </nav>
 </div>
 
-  <div id="chipModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);z-index:2000;padding:24px;flex-direction:column;justify-content:center;align-items:center;">
+  <div id="chipModal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);z-index:2000;padding:24px;flex-direction:column;justify-content:center;align-items:center;">
     <div class="card" style="width:100%;max-width:400px;border-color:var(--gold);box-shadow:0 0 30px rgba(255,215,0,0.15);">
       <div style="font-size:32px;text-align:center;margin-bottom:8px;">💿</div>
       <h3 id="cmTitle" style="font-size:14px;color:var(--gold);margin-bottom:16px;font-weight:700;text-align:center;border-bottom:1px solid rgba(255,215,0,0.3);padding-bottom:12px;"></h3>
@@ -778,7 +800,7 @@
     </div>
   </div>
 
-  <div id="badgesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);z-index:2000;padding:24px;flex-direction:column;justify-content:center;align-items:center;">
+  <div id="badgesModal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);z-index:2000;padding:24px;flex-direction:column;justify-content:center;align-items:center;">
     <div class="card" style="width:100%;max-width:400px;border-color:var(--gold);max-height:80vh;display:flex;flex-direction:column;">
       <h2 style="font-size:18px;font-weight:700;text-align:center;margin-bottom:8px;color:var(--gold);">生涯防衛実績</h2>
       <div style="text-align:center;margin-bottom:16px;">
@@ -1152,6 +1174,7 @@ function fmtDate(iso){
 function uid(){return Math.random().toString(36).substr(2,9)+Date.now().toString(36);}
 function getCat(cats,id){return cats.find(c=>c.id===id)||CATS.find(c=>c.id===id)||CATS[0];}
 function el(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function showErr(id,msg){const e=el(id);if(e){e.textContent='⚠️ '+msg;e.style.display='block';}}
 function hideErr(id){const e=el(id);if(e)e.style.display='none';}
 
@@ -1424,7 +1447,7 @@ function renderHome(){
     rl.innerHTML=recent.map(e=>{
       const cat=getCat(ch.categories,e.categoryId);
       return `<div class="eitem"><div class="eic" style="background:${cat.color}22;">${cat.icon}</div>
-        <div class="einf"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
+        <div class="einf"><div class="ememo">${esc(e.memo||cat.name)}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
         <div class="eamt">-${Y(e.amount)}</div></div>`;
     }).join('');
   }else{rt.style.display='none';emp.style.display='block';rl.innerHTML='';}
@@ -1447,6 +1470,16 @@ function initExp(){
   el('eDate').value = `${y}-${m}-${d}`;
   el('ePrev').style.display='none'; el('eErr').style.display='none';
   el('eSubBtn').disabled=false;
+}
+
+function addAmt(n){
+  const i=el('eAmt');
+  i.value=(parseInt(i.value,10)||0)+n;
+  updExpPrev();
+}
+function clearAmt(){
+  el('eAmt').value='';
+  updExpPrev();
 }
 
 function pickCat(id){
@@ -2008,7 +2041,7 @@ function renderHist(){
       return `<div style="border-left:3px solid ${cat.color}44;background:var(--card);border-radius:0;margin-bottom:0;padding:10px 12px;border-bottom:1px solid var(--border)22;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="eic" style="background:${cat.color}22;flex-shrink:0;">${cat.icon}</div>
-          <div class="einf" style="flex:1;min-width:0;"><div class="ememo">${e.memo||cat.name}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
+          <div class="einf" style="flex:1;min-width:0;"><div class="ememo">${esc(e.memo||cat.name)}</div><div class="emeta">${cat.name} · ${fmtDate(e.date)}</div></div>
           <div class="eamt" style="flex-shrink:0;">-${Y(e.amount)}</div>
         </div>
         ${isCurrentMonth ? `<div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
@@ -2370,7 +2403,7 @@ function refRow(item, delFn, withDate){
   const sub = withDate && item.date ? `<div style="font-size:10px;color:var(--txt3);">${fmtDate(item.date)}</div>` : '';
   return `<div style="display:flex;align-items:center;gap:10px;background:var(--bg);padding:10px 14px;border-radius:12px;border:1px solid var(--border);margin-bottom:8px;">
     <div style="flex:1;min-width:0;">
-      <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name||'（無題）'}</div>
+      <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.name||'（無題）')}</div>
       ${sub}
     </div>
     <span style="font-size:14px;font-weight:700;flex-shrink:0;">${Y(Number(item.amount)||0)}</span>
