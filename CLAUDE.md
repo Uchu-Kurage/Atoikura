@@ -33,7 +33,7 @@ Everything is in the single `<script>` block at the bottom of `index.html` (star
 - **Screens (SPA):** Each view is a `<div class="scr" id="scr-<name>">`. Only one has the `on` class at a time. Navigation is `go(name)`, which hides all `.scr`, shows `#scr-<name>`, updates the bottom nav, and dispatches to the screen's render function (`renderHome`, `renderBase`, `renderHist`, `initExp`, `playMono`). Screens: `splash`, `mono` (opening monologue), `register`, `edit-budget`, `reference`, `share`, `mend` (month-end result), `cp` (weekly checkpoint), `home`, `expense`, `base`, `history`.
 - **State:** One JSON object persisted under `localStorage` key `SK = 'kakebo_quest_v1'`. Read/write via `load()` / `save(state)`. Shape:
   ```
-  { character:   { name, avatar, monthlyBudget, categories[], lifetimeSaved, fixedCosts[], carryover },
+  { character:   { name, avatar, monthlyBudget, categories[], lifetimeSaved, fixedCosts[], carryover, unbudgetedAsTemp },
     currentMonth:{ year, month, baseHp, currentHp, expenses[], tempExpenses[], checkpoints[], status },
     inventory:   { materials, unlockedChips[] },
     baseLevel,

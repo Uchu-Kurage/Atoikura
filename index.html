@@ -335,6 +335,20 @@
     </div>
   </div>
 
+  <div class="card" id="unbudgetedCard" style="display:none;margin-top:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <p style="font-size:13px;font-weight:700;">📋 予算なしカテゴリを臨時費あつかい</p>
+        <p style="font-size:11px;color:var(--txt2);margin-top:2px;">予算0円のカテゴリへの支出は臨時費（参考記録）になり、コアエネルギーを消費しません</p>
+      </div>
+      <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:pointer;">
+        <input type="checkbox" id="unbudgetedToggle" style="opacity:0;width:0;height:0;" onchange="updUnbudgetedToggle()">
+        <span id="unbudgetedTrack" style="position:absolute;inset:0;background:var(--bg);border:1px solid var(--border);border-radius:26px;transition:.3s;"></span>
+        <span id="unbudgetedKnob" style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:var(--txt3);border-radius:50%;transition:.3s;"></span>
+      </label>
+    </div>
+  </div>
+
   <div style="margin-top:12px;">
     <button class="btn btn-g" onclick="saveEditBudget()" id="saveEditBtn">💾 変更を保存する</button>
   </div>
@@ -1457,10 +1471,11 @@ function renderHome(){
 function initExp(){
   const state=load();
   const cats=state?.character?.categories||CATS;
+  const tmpMode=!!(state?.character?.unbudgetedAsTemp);
   const grid=el('eCatGrid');
   grid.innerHTML=cats.map(cat=>`
     <div class="catc ${cat.id===eCatId?'sel':''}" id="ec_${cat.id}" onclick="pickCat('${cat.id}')">
-      <div class="catic">${cat.icon}</div><div class="catnm">${cat.name}</div>
+      <div class="catic">${cat.icon}</div><div class="catnm">${cat.name}</div>${tmpMode&&!(cat.limit>0)?'<div style="font-size:8px;color:var(--gold);margin-top:2px;">臨時費</div>':''}
     </div>`).join('');
   el('eAmt').value=''; el('eMemo').value='';
   const today = new Date();
@@ -1470,6 +1485,7 @@ function initExp(){
   el('eDate').value = `${y}-${m}-${d}`;
   el('ePrev').style.display='none'; el('eErr').style.display='none';
   el('eSubBtn').disabled=false;
+  updExpPrev();
 }
 
 function addAmt(n){
@@ -1492,11 +1508,17 @@ function pickCat(id){
 function updExpPrev(){
   const amt=parseInt(el('eAmt').value,10)||0;
   const pv=el('ePrev');
+  const state=load();const cats=state?.character?.categories||CATS;
+  const cat=getCat(cats,eCatId);
+  const asTemp=!!(state?.character?.unbudgetedAsTemp)&&!(cat.limit>0);
+  el('eSubBtn').textContent=asTemp?'📋 臨時費として記録する':'🔫 迎撃する（エネルギー消費確定）';
   if(amt>0){
-    const state=load();const cats=state?.character?.categories||CATS;
-    const cat=getCat(cats,eCatId);
-    el('ePrevCat').innerHTML=`<span style="font-size:22px;">${cat.icon}</span><span style="font-size:13px;color:var(--txt2);">${cat.name}</span>`;
+    const note=asTemp?`<span style="font-size:10px;color:var(--gold);">臨時費（コア消費なし）</span>`:'';
+    el('ePrevCat').innerHTML=`<span style="font-size:22px;">${cat.icon}</span><span style="font-size:13px;color:var(--txt2);">${cat.name}</span>${note}`;
     el('ePrevAmt').textContent='−'+Y(amt);
+    el('ePrevAmt').style.color=asTemp?'var(--gold)':'var(--red)';
+    pv.style.background=asTemp?'rgba(255,215,0,.08)':'rgba(224,68,68,.1)';
+    pv.style.borderColor=asTemp?'rgba(255,215,0,.35)':'rgba(224,68,68,.3)';
     pv.style.display='flex';
   }else pv.style.display='none';
 }
@@ -1516,12 +1538,27 @@ function submitExp(){
     now = new Date(yy, mm-1, dd, 12, 0, 0).toISOString();
   }
   const memo=(el('eMemo').value||'').trim();
-  
+  const catDef = getCat(state.character.categories, eCatId);
+
+  // Unbudgeted-as-temp mode: record as a reference temp expense, no core energy damage
+  if(state.character.unbudgetedAsTemp && !(catDef.limit>0)){
+    if(!Array.isArray(state.currentMonth.tempExpenses)) state.currentMonth.tempExpenses=[];
+    state.currentMonth.tempExpenses.push({id:uid(),name:`${catDef.icon} ${memo||catDef.name}`,amount:amt,date:now});
+    save(state);
+    const ovl=el('dmgOvl'),dn=el('dmgNum');
+    ovl.className='lore';
+    dn.innerHTML='📋 臨時費として記録<br><span style="font-size:12px;opacity:0.85;">−'+Y(amt)+'（コアエネルギー消費なし）</span>';
+    dn.className='loretext';
+    dn.style.display='block';
+    dn.style.animation='none'; void dn.offsetWidth; dn.style.animation='fltdmg 1.5s ease-out forwards';
+    setTimeout(()=>{ ovl.className=''; dn.style.display='none'; go('home'); },1500);
+    return;
+  }
+
   // Weekly Budget Check for Drop logic
   const nowWk = getWeekStr(now);
   const catExps = state.currentMonth.expenses.filter(e => e.categoryId === eCatId && getWeekStr(e.date) === nowWk);
   const weeklySpent = catExps.reduce((s, e) => s + e.amount, 0) + amt;
-  const catDef = getCat(state.character.categories, eCatId);
   const weeklyLimit = Math.floor((catDef.limit || 0) / 4);
   
   let droppedChip = null;
@@ -2281,6 +2318,13 @@ function initEditBudget() {
     tog.checked = !!(ch.carryover);
     updCarryoverToggle();
   }
+  // Show unbudgeted-as-temp toggle
+  const uc = el('unbudgetedCard');
+  if(uc) {
+    uc.style.display = 'block';
+    el('unbudgetedToggle').checked = !!(ch.unbudgetedAsTemp);
+    updUnbudgetedToggle();
+  }
 }
 
 function updEditCatTotal() {
@@ -2303,10 +2347,12 @@ function updEditCatTotal() {
   }
 }
 
-function updCarryoverToggle() {
-  const tog = el('carryoverToggle');
-  const track = el('carryoverTrack');
-  const knob = el('carryoverKnob');
+function updCarryoverToggle() { paintToggle('carryover'); }
+function updUnbudgetedToggle() { paintToggle('unbudgeted'); }
+function paintToggle(prefix) {
+  const tog = el(prefix + 'Toggle');
+  const track = el(prefix + 'Track');
+  const knob = el(prefix + 'Knob');
   if(tog.checked) {
     track.style.background = 'var(--green)';
     track.style.borderColor = 'var(--green)';
@@ -2345,6 +2391,9 @@ function saveEditBudget() {
   // Save carryover setting
   const togEl = el('carryoverToggle');
   if(togEl) state.character.carryover = togEl.checked;
+  // Save unbudgeted-as-temp setting
+  const utogEl = el('unbudgetedToggle');
+  if(utogEl) state.character.unbudgetedAsTemp = utogEl.checked;
   
   if(state.currentMonth) {
     state.currentMonth.baseHp = newBv + (state.currentMonth.carryoverBonus||0);
