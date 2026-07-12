@@ -2398,10 +2398,26 @@ function saveEditBudget() {
   if(state.currentMonth) {
     state.currentMonth.baseHp = newBv + (state.currentMonth.carryoverBonus||0);
     state.currentMonth.currentHp += diff;
+    // Unbudgeted-as-temp mode: offer to reclassify this month's existing
+    // expenses in unbudgeted categories as temp expenses (refunds core energy)
+    if(state.character.unbudgetedAsTemp) {
+      const unb = state.currentMonth.expenses.filter(e => !((getCat(newCats, e.categoryId).limit) > 0));
+      const unbTotal = unb.reduce((s, e) => s + e.amount, 0);
+      if(unb.length && confirm(`予算なしカテゴリに登録済みの今月の支出 ${unb.length}件（合計 ${Y(unbTotal)}）を臨時費に振り替えますか？\nコアエネルギーがその分回復します。`)) {
+        if(!Array.isArray(state.currentMonth.tempExpenses)) state.currentMonth.tempExpenses = [];
+        unb.forEach(e => {
+          const c = getCat(newCats, e.categoryId);
+          state.currentMonth.tempExpenses.push({id:e.id, name:`${c.icon} ${e.memo||c.name}`, amount:e.amount, date:e.date});
+        });
+        const unbIds = new Set(unb.map(e => e.id));
+        state.currentMonth.expenses = state.currentMonth.expenses.filter(e => !unbIds.has(e.id));
+        state.currentMonth.currentHp += unbTotal;
+      }
+    }
     if(state.currentMonth.currentHp <= 0) state.currentMonth.status = 'defeated';
     else state.currentMonth.status = 'active';
   }
-  
+
   save(state);
   go('home');
 }
