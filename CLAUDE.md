@@ -59,7 +59,7 @@ Everything is in the single `<script>` block at the bottom of `index.html` (star
 - **Month-end settlement (`checkMonthEnd`)** computes materials from: 10% of leftover HP, a +1000 clear bonus if not in the red, per-week budget-clearance bonuses (+200/week, ISO/Monday-start weeks), and per-category limit-clearance bonuses (+200/category). Optional `carryover` rolls unspent budget into next month's `baseHp`.
 - **Weeks are ISO / Monday-start:** `getWeekStr(dateStr)` returns `YYYY-Www`; week partitioning in settlement also treats Monday as day 0 (`(getDay()+6)%7`).
 - **Terse global helpers:** `el(id)` = `getElementById`, `Y(n)` = yen formatting, `go(name)` = navigate, `uid()`, `getCat()`, `showErr`/`hideErr(id,msg)`, `fmtDate`. Expect single-letter/abbreviated names throughout.
-- **Two expense kinds:** `expenses[]` are real threats that damage HP and count toward the game; `tempExpenses[]` are non-game reference records (see the `reference` screen), and `fixedCosts[]` are fixed costs — neither affects HP.
+- **Two expense kinds:** `expenses[]` are real threats that damage HP and count toward the game; `tempExpenses[]` are non-game reference records (see the `reference` screen), and `fixedCosts[]` are fixed costs — neither affects HP. When `character.unbudgetedAsTemp` is on, expenses in categories with `limit: 0` are recorded into `tempExpenses[]` instead, keeping the full expense format (`categoryId`, `memo`) so `saveEditBudget` can move them losslessly between the two arrays (with an HP adjustment) when the mode or category budgets change; manually added temp records have no `categoryId` and are never auto-converted.
 
 ### State-migration pattern
 

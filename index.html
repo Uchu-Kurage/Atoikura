@@ -1543,7 +1543,9 @@ function submitExp(){
   // Unbudgeted-as-temp mode: record as a reference temp expense, no core energy damage
   if(state.character.unbudgetedAsTemp && !(catDef.limit>0)){
     if(!Array.isArray(state.currentMonth.tempExpenses)) state.currentMonth.tempExpenses=[];
-    state.currentMonth.tempExpenses.push({id:uid(),name:`${catDef.icon} ${memo||catDef.name}`,amount:amt,date:now});
+    // Keep the full expense format (categoryId/memo) so the record can be
+    // restored to a game expense when the mode is turned off
+    state.currentMonth.tempExpenses.push({id:uid(),name:`${catDef.icon} ${memo||catDef.name}`,amount:amt,categoryId:eCatId,memo,date:now});
     save(state);
     const ovl=el('dmgOvl'),dn=el('dmgNum');
     ovl.className='lore';
@@ -2398,10 +2400,42 @@ function saveEditBudget() {
   if(state.currentMonth) {
     state.currentMonth.baseHp = newBv + (state.currentMonth.carryoverBonus||0);
     state.currentMonth.currentHp += diff;
+    // Unbudgeted-as-temp mode: temp records converted from game expenses keep
+    // the full expense format (categoryId/memo), so reclassification is a
+    // lossless move between expenses[] and tempExpenses[] in both directions.
+    if(!Array.isArray(state.currentMonth.tempExpenses)) state.currentMonth.tempExpenses = [];
+    const mode = state.character.unbudgetedAsTemp;
+    // Mode on: this month's expenses in unbudgeted categories → temp (refunds core energy)
+    const toTemp = mode ? state.currentMonth.expenses.filter(e => !((getCat(newCats, e.categoryId).limit) > 0)) : [];
+    if(toTemp.length) {
+      const total = toTemp.reduce((s, e) => s + e.amount, 0);
+      if(confirm(`予算なしカテゴリに登録済みの今月の支出 ${toTemp.length}件（合計 ${Y(total)}）を臨時費に振り替えますか？\nコアエネルギーがその分回復します。`)) {
+        toTemp.forEach(e => {
+          const c = getCat(newCats, e.categoryId);
+          state.currentMonth.tempExpenses.push({id:e.id, name:`${c.icon} ${e.memo||c.name}`, amount:e.amount, categoryId:e.categoryId, memo:e.memo||'', date:e.date});
+        });
+        const ids = new Set(toTemp.map(e => e.id));
+        state.currentMonth.expenses = state.currentMonth.expenses.filter(e => !ids.has(e.id));
+        state.currentMonth.currentHp += total;
+      }
+    }
+    // Mode off (or the category got a budget): converted temp records → back to
+    // game expenses (re-consumes core energy). Manual temp records have no
+    // categoryId and are never touched.
+    const toGame = state.currentMonth.tempExpenses.filter(t => t.categoryId && (!mode || (getCat(newCats, t.categoryId).limit) > 0));
+    if(toGame.length) {
+      const total = toGame.reduce((s, t) => s + (Number(t.amount)||0), 0);
+      if(confirm(`臨時費に振り替えていた支出 ${toGame.length}件（合計 ${Y(total)}）を変動費に戻しますか？\nコアエネルギーがその分消費されます。`)) {
+        toGame.forEach(t => state.currentMonth.expenses.push({id:t.id, amount:Number(t.amount)||0, categoryId:t.categoryId, memo:t.memo||'', date:t.date}));
+        const ids = new Set(toGame.map(t => t.id));
+        state.currentMonth.tempExpenses = state.currentMonth.tempExpenses.filter(t => !ids.has(t.id));
+        state.currentMonth.currentHp -= total;
+      }
+    }
     if(state.currentMonth.currentHp <= 0) state.currentMonth.status = 'defeated';
     else state.currentMonth.status = 'active';
   }
-  
+
   save(state);
   go('home');
 }
