@@ -1161,17 +1161,38 @@ function go(name){
 function Y(n){return '¥'+Number(n).toLocaleString('ja-JP');}
 function hpPct(cur,base){return Math.max(0,Math.min(100,(cur/base)*100));}
 function hpCol(cs){return cs==='healthy'?'#3ecf8e':cs==='tired'?'#f5c542':'#e04444';}
-function cst(p,status,daysLeft,daysInM){
+// 今週（ISO週・月曜始まり）の予算集計。ホームの「今週使える金額」と
+// キャラクターのステータス判定で同じ値を使うための共通ヘルパー。
+// weekLeft = 今週までの累積予算 − 累積支出（前週の余りは繰越、使い過ぎは借金として反映）
+function weekBudgetInfo(cm){
+  const daysInM = new Date(cm.year, cm.month, 0).getDate();
+  const nowWk = getWeekStr(new Date().toISOString());
+  const wkDays = {};
+  for(let dnum=1; dnum<=daysInM; dnum++){
+    const ws = getWeekStr(new Date(cm.year, cm.month-1, dnum).toISOString());
+    wkDays[ws] = (wkDays[ws]||0) + 1;
+  }
+  let cumBudgetDays = 0;
+  for(const ws in wkDays){ if(ws<=nowWk) cumBudgetDays += wkDays[ws]; }
+  const cumBudget = cm.baseHp * (cumBudgetDays / daysInM);
+  const cumSpent = cm.expenses.filter(e=>getWeekStr(e.date)<=nowWk).reduce((s,e)=>s+e.amount,0);
+  const weekLeft = Math.floor(cumBudget - cumSpent);
+  const weekSpent = cm.expenses.filter(e=>getWeekStr(e.date)===nowWk).reduce((s,e)=>s+e.amount,0);
+  // 今週(ISO週)に割り当てられた予算。月初・月末の部分週では日数が7日未満に
+  // なるので、その実日数に応じてスケールする（ステータス判定のしきい値の基準）。
+  const thisWeekBudget = cm.baseHp * ((wkDays[nowWk]||0) / daysInM);
+  return { daysInM, nowWk, wkDays, cumBudget, weekLeft, weekSpent, thisWeekBudget };
+}
+// ステータスは「今週の予算残(weekLeft)」を「今週の予算(weekBudget)」に対する
+// 割合で判定する。ホームに表示される weekLeft と常に整合するため、ISO週の途中で
+// 今週の予算が尽きたときに healthy のまま止まらない。weekBudget は部分週では
+// 実日数に応じて縮むので、月初・月末の短い週でも正しく判定できる。
+function cst(p,status,weekLeft,weekBudget){
   if(status==='cleared')return 'victory';
   if(p<=0)return 'defeated';
-  if(daysLeft!==undefined && daysInM!==undefined){
-    const currentDay = Math.min(daysInM, daysInM - daysLeft + 1);
-    const nextMarkerDay = Math.ceil(currentDay / 7) * 7;
-    const targetMarkerPct = Math.max(0, ((daysInM - nextMarkerDay) / daysInM) * 100);
-    const weekBudgetPct = (7 / daysInM) * 100;
-    const diff = p - targetMarkerPct;
-    if(diff <= weekBudgetPct * 0.2) return 'critical';
-    if(diff <= weekBudgetPct * 0.5) return 'tired';
+  if(weekLeft!==undefined && weekBudget>0){
+    if(weekLeft <= weekBudget * 0.2) return 'critical';
+    if(weekLeft <= weekBudget * 0.5) return 'tired';
     return 'healthy';
   }
   if(p<=20)return 'critical'; if(p<=50)return 'tired';
@@ -1323,7 +1344,9 @@ function renderHome(){
   const pct=hpPct(cm.currentHp,cm.baseHp);
   const days=daysLeft(cm.year,cm.month);
   const daysInM = new Date(cm.year, cm.month, 0).getDate();
-  const cs=cst(pct,cm.status,days,daysInM);
+  // 今週(ISO週)の予算残を先に計算し、ステータス判定と表示の両方で使う
+  const wkInfo = weekBudgetInfo(cm);
+  const cs=cst(pct,cm.status,wkInfo.weekLeft,wkInfo.thisWeekBudget);
   const ci=CSTATE[cs];
   const col=hpCol(cs);
   const marksBox = el('hHpMarks');
@@ -1409,24 +1432,8 @@ function renderHome(){
   el('hDaily').textContent=days>0?Y(Math.floor(cm.currentHp/days)):'—';
 
   // 今週の集計（ISO週。checkpoint と同じ getWeekStr で「今週」を判定）
-  const nowWk=getWeekStr(new Date().toISOString());
-  // 週ごとに今月分の日数を集計し、月予算を日数按分する（月をまたぐ週にも対応）
-  const wkDays={};
-  for(let dnum=1; dnum<=daysInM; dnum++){
-    const ws=getWeekStr(new Date(cm.year, cm.month-1, dnum).toISOString());
-    wkDays[ws]=(wkDays[ws]||0)+1;
-  }
-  // 今週までに割り当てられた累積予算（前週までの繰越・借金を含む）
-  let cumBudgetDays=0;
-  for(const ws in wkDays){ if(ws<=nowWk) cumBudgetDays+=wkDays[ws]; }
-  const cumBudget=cm.baseHp*(cumBudgetDays/daysInM);
-  // 今週までの累積支出
-  const cumSpent=cm.expenses.filter(e=>getWeekStr(e.date)<=nowWk).reduce((s,e)=>s+e.amount,0);
-  // 今週使える＝今週までの累積予算 − 累積支出
-  //   前週の余り＝繰越（プラス）、使い過ぎ＝借金（マイナス）として今週分に反映される
-  const weekLeft=Math.floor(cumBudget-cumSpent);
-  // 今週使った＝今週分の支出のみ
-  const weekSpent=cm.expenses.filter(e=>getWeekStr(e.date)===nowWk).reduce((s,e)=>s+e.amount,0);
+  // ステータス判定と同じ weekBudgetInfo の結果を再利用する
+  const {weekLeft, weekSpent} = wkInfo;
   el('hWeekSpent').textContent=Y(weekSpent);
   el('hWeekLeft').textContent=Y(weekLeft);
   el('hWeekLeft').style.color=weekLeft<0?'var(--red)':'var(--green)';
