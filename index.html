@@ -237,6 +237,24 @@
     .wl-none{opacity:.45;}
     @media (prefers-reduced-motion: reduce){ .wv-pend{animation:none;} }
 
+    /* ── GADGET MODS ── */
+    .gitem{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);
+      border-radius:12px;padding:12px;margin-bottom:8px;}
+    .gitem .gico{font-size:26px;flex-shrink:0;width:34px;text-align:center;}
+    .gitem .ginf{flex:1;min-width:0;}
+    .gitem .gnm{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .gitem .glv{font-size:9px;font-family:var(--font-g);color:var(--gold);}
+    .gitem .gds{font-size:10px;color:var(--txt2);margin-top:2px;line-height:1.4;}
+    .gitem .gpips{display:flex;gap:3px;margin-top:5px;}
+    .gitem .gpip{width:18px;height:5px;border-radius:2px;background:var(--brite);}
+    .gitem .gpip.on{background:var(--green);box-shadow:0 0 6px rgba(62,207,142,.5);}
+    .gitem .gbtn{flex-shrink:0;background:var(--card2);border:1px solid var(--brite);color:var(--txt);
+      border-radius:8px;padding:8px 10px;font-size:11px;font-weight:700;font-family:var(--font-u);
+      cursor:pointer;touch-action:manipulation;min-width:76px;text-align:center;line-height:1.3;}
+    .gitem .gbtn:active{background:var(--brite);}
+    .gitem .gbtn:disabled{opacity:.45;pointer-events:none;}
+    .gitem .gbtn.max{color:var(--gold);border-color:rgba(255,215,0,.4);background:rgba(255,215,0,.08);}
+
     /* ── CHIP GRID ── */
     .chip-item{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border .2s;}
     .chip-item.unlocked{border-color:var(--gold);color:var(--gold);}
@@ -800,7 +818,7 @@
       <span id="bMat" style="font-size:14px;font-weight:700;color:var(--green);"></span>
     </div>
   </div>
-  <p style="font-size:11px;color:var(--txt3);margin-bottom:24px;text-align:right;line-height:1.4;">※資材（🔩）は月末のサバイバル精算時に獲得できます。</p>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:24px;text-align:right;line-height:1.4;">※資材（🔩）は月末精算と、撃退カレンダーで予算内の日を迎撃したときに獲得できます。</p>
   
   <div class="card tcen mb24" id="bMainCard" style="position:relative;overflow:hidden;">
     <div style="position:absolute;inset:0;background:rgba(28,28,36,0.7);z-index:0;pointer-events:none;" id="bMainOvl"></div>
@@ -819,10 +837,17 @@
   </div>
   
   <div class="fbet mb12">
+    <p class="stitle" style="margin:0;">🔧 ガジェット改造</p>
+    <span style="font-size:11px;color:var(--txt2);">資材で迎撃を強化</span>
+  </div>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※資材（🔩）を使って迎撃ミニゲームの性能を強化します。節約した日ほど資材が貯まります。</p>
+  <div id="bGadgets" style="margin-bottom:24px;"></div>
+
+  <div class="fbet mb12">
     <p class="stitle" style="margin:0;">アーカイブ</p>
     <span id="bChipCnt" style="font-size:11px;color:var(--txt2);"></span>
   </div>
-  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※支出がカテゴリ別の週次予算内に収まっている場合、迎撃時にランダムでドロップします。</p>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※撃退カレンダーで日を迎撃したとき、その日の支出が日割り予算に収まっているほど高確率でドロップします。</p>
   <div class="cgrid" id="bChips" style="grid-template-columns:repeat(2,1fr);"></div>
   
   <nav class="bnav">
@@ -1027,6 +1052,34 @@ const BASE_LEVELS = [
   { level: 4, name: 'ミニマルなエコルーム', desc: '無駄を削ぎ落とした美しく快適な暮らし。', cost: 8000, icon: '🪴' },
   { level: 5, name: '緑豊かなペントハウス', desc: '心まで豊かになる、究極の「丁寧な暮らし」。', cost: 20000, icon: '✨' }
 ];
+
+// Gadget mods: material-funded, permanent upgrades to the invader minigame.
+// `lv` (0 = unowned) indexes into costs[] for the NEXT level's price; effects
+// are read from the level in getGadgetEffects(). Saving (frugal wave days) is
+// what earns the materials, so the upgrade loop rewards spending less.
+const GADGETS = [
+  { id:'fire',   name:'連射装置',     icon:'⚡', max:3, costs:[300,800,1800],
+    eff:'連射間隔 −25%/Lv（弾がたくさん出る）' },
+  { id:'spread', name:'拡散ショット', icon:'🔱', max:2, costs:[500,1400],
+    eff:'ビームが Lv+1 方向に分裂' },
+  { id:'beam',   name:'広域ビーム',   icon:'🎯', max:3, costs:[300,700,1500],
+    eff:'当たり判定 +25%/Lv' },
+  { id:'slow',   name:'減速フィールド', icon:'🌀', max:2, costs:[400,1000],
+    eff:'侵略者 −18%/Lv・制限時間 +1.2s/Lv' },
+];
+
+// Resolve the active minigame modifiers from the saved gadget levels.
+function getGadgetEffects(state){
+  const g = (state && state.gadgets) || {};
+  const fire = g.fire|0, spread = g.spread|0, beam = g.beam|0, slow = g.slow|0;
+  return {
+    fireEvery: Math.max(120, Math.round(230 * Math.pow(0.75, fire))), // ⚡ faster auto-fire
+    shots: 1 + spread,                                                // 🔱 bullets per volley
+    hitR: 16 + beam * 4,                                              // 🎯 collision half-size
+    speedMul: Math.max(0.4, 1 - slow * 0.18),                        // 🌀 slower invaders
+    timeBonus: slow * 1200,                                           // 🌀 longer timer (ms)
+  };
+}
 
 const LIFETIME_BADGES = [
   // 累計エネルギー系
@@ -1816,42 +1869,50 @@ function playWaveDay(day){
 
   const total=exps.reduce((s,e)=>s+e.amount,0);
   const daysInM=new Date(cm.year,cm.month,0).getDate();
-  const withinBudget=total <= cm.baseHp/daysInM;   // that day's spend vs. daily pace
+  const pace=cm.baseHp/daysInM;                       // daily budget pace
+  const r=pace>0 ? total/pace : 1;                     // that day's spend vs. pace
+  // Frugality (savings) sets the reward ceiling: r≤0.5→1.0, r=1.0→0.5, r≥1.5→0.
+  const frugality=Math.max(0, Math.min(1, 1.5 - r));
 
   const finalize=(killRatio)=>{
+    // Frugality gates every reward (multiplicative), so skill can never rescue an
+    // overspending day; kill ratio only multiplies within the frugality ceiling.
     let dropped=null;
-    if(withinBudget && Math.random() < 0.20 + 0.30*killRatio){
+    if(Math.random() < 0.5 * frugality * (0.5 + 0.5*killRatio)){
       if(!state.inventory) state.inventory={materials:0,unlockedChips:[]};
       const lvl=state.baseLevel||1;
       const avail=DATA_CHIPS.filter(c=>!state.inventory.unlockedChips.includes(c.id)&&c.minLevel<=lvl);
       if(avail.length){ dropped=avail[Math.floor(Math.random()*avail.length)]; state.inventory.unlockedChips.push(dropped.id); }
     }
+    const mats=Math.round(40 * frugality * (0.4 + 0.6*killRatio));
+    if(mats>0){ if(!state.inventory) state.inventory={materials:0,unlockedChips:[]}; state.inventory.materials += mats; }
     if(!Array.isArray(cm.processedWaveDays)) cm.processedWaveDays=[];
     cm.processedWaveDays.push(day);
     save(state);
-    showWaveReward(exps.length, total, dropped);
+    showWaveReward(exps.length, total, dropped, mats);
   };
 
   const reduceMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(state.character.minigameOn!==false && !reduceMotion){
     const icons=exps.map(e=>getCat(state.character.categories,e.categoryId).icon);
     const [ ,wm,wd]=day.split('-').map(Number);
-    startInvaderGame(icons, `${wm}/${wd} の脅威`, finalize);
+    startInvaderGame(icons, `${wm}/${wd} の脅威`, finalize, r);
   } else {
     finalize(0);
   }
 }
 
 // Loot reveal after a wave, reusing the damage overlay, then back to the calendar.
-function showWaveReward(count, total, dropped){
+function showWaveReward(count, total, dropped, mats){
   const ovl=el('dmgOvl'), dn=el('dmgNum');
+  const matLine = mats>0 ? ' ・ <span style="color:var(--green);">🔩+'+mats+'</span>' : '';
   if(dropped){
     ovl.className='lore';
-    dn.innerHTML='✨ データチップ発見！<br><span style="font-size:11px;opacity:0.85;">脅威 '+count+'件を処理</span>';
+    dn.innerHTML='✨ データチップ発見！<br><span style="font-size:11px;opacity:0.85;">脅威 '+count+'件を処理'+matLine+'</span>';
     dn.className='loretext';
   } else {
     ovl.className='flash';
-    dn.innerHTML='🛡️ 脅威 '+count+'件を処理<br><span style="font-size:11px;opacity:0.85;">−'+Y(total)+'</span>';
+    dn.innerHTML='🛡️ 脅威 '+count+'件を処理<br><span style="font-size:11px;opacity:0.85;">−'+Y(total)+matLine+'</span>';
     dn.className='';
   }
   dn.style.display='block';
@@ -1909,11 +1970,14 @@ window.atoikuraDebug = (on) => {
 let mgState = null;
 function mgFinish(){ if(mgState && mgState.finish) mgState.finish(); }
 
-function startInvaderGame(icons, label, onDone){
+function startInvaderGame(icons, label, onDone, ratio){
   const wrap = el('miniGame');
   const canvas = el('mgCanvas');
   el('mgResult').classList.remove('on');
   wrap.classList.add('on');
+
+  const fx = getGadgetEffects(load());   // active gadget mods
+  const rr0 = (ratio && ratio > 0) ? ratio : 1;   // spend-vs-pace: bigger overspend → harder
 
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const box = canvas.getBoundingClientRect();
@@ -1943,9 +2007,11 @@ function startInvaderGame(icons, label, onDone){
   for(let i = 0; i < 26; i++) stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.2 + 0.3 });
   let dir = 1;
   const stepDown = 14;
-  const baseSpeed = 28 + total * 1.5;   // more threats sweep a touch faster
-  const fireEvery = 230;
-  const DURATION = 7000;
+  // Difficulty scales with how far the day's spend exceeded the budget pace
+  // (thematic: a bigger overspend is a bigger threat); the 🌀 slow gadget damps it.
+  const baseSpeed = (24 + Math.min(rr0, 3) * 16) * fx.speedMul;
+  const fireEvery = fx.fireEvery;          // ⚡ 連射装置
+  const DURATION = 7000 + fx.timeBonus;    // 🌀 減速フィールド extends the timer
   let lastFire = 0, lastTs = 0, elapsedMs = 0, killed = 0, ended = false;
 
   const moveTo = (clientX) => {
@@ -1972,12 +2038,21 @@ function startInvaderGame(icons, label, onDone){
     invaders.forEach(i => { if(i.alive) maxY = Math.max(maxY, i.y); });
     if(maxY >= turret.y - 24){ finish(); return; }  // threats broke through
 
-    if(ts - lastFire > fireEvery){ bullets.push({ x: turret.x, y: turret.y - 16 }); lastFire = ts; }
+    if(ts - lastFire > fireEvery){
+      // 🔱 拡散ショット: fire fx.shots bullets fanned out around vertical.
+      const spread = 90;   // px/s horizontal velocity per outward step
+      for(let s = 0; s < fx.shots; s++){
+        const off = fx.shots === 1 ? 0 : (s - (fx.shots - 1) / 2);
+        bullets.push({ x: turret.x, y: turret.y - 16, vx: off * spread });
+      }
+      lastFire = ts;
+    }
     for(let b = bullets.length - 1; b >= 0; b--){
       bullets[b].y -= 460 * dt;
-      if(bullets[b].y < -10){ bullets.splice(b, 1); continue; }
+      bullets[b].x += (bullets[b].vx || 0) * dt;
+      if(bullets[b].y < -10 || bullets[b].x < -10 || bullets[b].x > W + 10){ bullets.splice(b, 1); continue; }
       for(const inv of invaders){
-        if(inv.alive && Math.abs(bullets[b].x - inv.x) < 16 && Math.abs(bullets[b].y - inv.y) < 16){
+        if(inv.alive && Math.abs(bullets[b].x - inv.x) < fx.hitR && Math.abs(bullets[b].y - inv.y) < fx.hitR){
           inv.alive = false; killed++;
           booms.push({ x: inv.x, y: inv.y, t: 0 });
           bullets.splice(b, 1);
@@ -1996,9 +2071,10 @@ function startInvaderGame(icons, label, onDone){
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '24px serif';
     invaders.forEach(i => { if(i.alive) ctx.fillText(i.icon, i.x, i.y); });
-    // lasers
+    // lasers (🎯 広域ビーム widens them with the hit radius)
     ctx.fillStyle = '#3ecf8e';
-    bullets.forEach(b => ctx.fillRect(b.x - 1.5, b.y - 8, 3, 12));
+    const bw = Math.max(1.5, fx.hitR * 0.12);
+    bullets.forEach(b => ctx.fillRect(b.x - bw, b.y - 8, bw * 2, 12));
     // booms
     ctx.font = '22px serif';
     booms.forEach(k => ctx.fillText('💥', k.x, k.y));
@@ -2071,7 +2147,9 @@ function renderBase() {
   bCard.style.backgroundSize = 'cover';
   bCard.style.backgroundPosition = 'center';
   
+  if(!state.gadgets){ state.gadgets = { fire:0, spread:0, beam:0, slow:0 }; save(state); }
   el('bMat').textContent = state.inventory.materials;
+  renderGadgets(state);
   el('bIco').textContent = curBase.icon;
   el('bName').textContent = `Lv.${curBase.level} ${curBase.name}`;
   el('bDesc').textContent = curBase.desc;
@@ -2125,6 +2203,46 @@ function upgradeBase() {
     save(state);
     renderBase();
   }
+}
+
+// Render the gadget-mod list on the base screen (level pips + next-cost button).
+function renderGadgets(state){
+  const box = el('bGadgets'); if(!box) return;
+  if(!state.gadgets) state.gadgets = { fire:0, spread:0, beam:0, slow:0 };
+  const mats = (state.inventory && state.inventory.materials) || 0;
+  box.innerHTML = GADGETS.map(g => {
+    const lv = state.gadgets[g.id]|0;
+    const atMax = lv >= g.max;
+    const cost = atMax ? null : g.costs[lv];
+    const pips = Array.from({length:g.max}, (_,i)=>`<span class="gpip ${i<lv?'on':''}"></span>`).join('');
+    let btn;
+    if(atMax) btn = `<button class="gbtn max" disabled>MAX</button>`;
+    else if(mats >= cost) btn = `<button class="gbtn" onclick="upgradeGadget('${g.id}')">🔩${cost}<br>で強化</button>`;
+    else btn = `<button class="gbtn" disabled>🔩${cost}<br>不足</button>`;
+    return `<div class="gitem">
+      <div class="gico">${g.icon}</div>
+      <div class="ginf">
+        <div class="gnm">${g.name} <span class="glv">Lv.${lv}/${g.max}</span></div>
+        <div class="gds">${g.eff}</div>
+        <div class="gpips">${pips}</div>
+      </div>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+
+function upgradeGadget(id){
+  const state = load(); if(!state) return;
+  if(!state.gadgets) state.gadgets = { fire:0, spread:0, beam:0, slow:0 };
+  const g = GADGETS.find(x => x.id === id); if(!g) return;
+  const lv = state.gadgets[id]|0;
+  if(lv >= g.max) return;
+  const cost = g.costs[lv];
+  if(((state.inventory && state.inventory.materials) || 0) < cost) return;
+  state.inventory.materials -= cost;
+  state.gadgets[id] = lv + 1;
+  save(state);
+  renderBase();
 }
 
 function showChip(id) {
