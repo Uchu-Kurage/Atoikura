@@ -776,6 +776,19 @@
       <span><i class="wl wl-none"></i>支出なし</span>
     </div>
   </div>
+
+  <div class="card" id="wvDebug" style="display:none;border-color:rgba(245,197,66,.4);">
+    <p style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;">🐞 デバッグ：ミニゲーム</p>
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+      <div style="flex:1;">
+        <label style="display:block;font-size:11px;color:var(--txt2);margin-bottom:4px;">侵略者の数（1〜15）</label>
+        <input class="inp" type="number" id="dbgCount" value="8" min="1" max="15" inputmode="numeric" style="padding:10px 12px;font-size:15px;">
+      </div>
+      <button class="btn btn-s" onclick="debugPlayWave()" style="width:auto;padding:12px 16px;white-space:nowrap;">▶ テスト起動</button>
+    </div>
+    <p id="dbgResult" style="font-size:12px;color:var(--txt2);margin-top:10px;min-height:1.2em;"></p>
+    <p style="font-size:10px;color:var(--txt3);margin-top:6px;line-height:1.5;">※デバッグ起動はHP・データチップ・処理済み状態を一切変更しません。<code>#debug</code> をURLに付けるか、コンソールで <code>atoikuraDebug()</code> / <code>debugMiniGame(n)</code> を実行して有効化できます。</p>
+  </div>
 </div>
 
 <!-- ═══════════════ BASE / ARCHIVES ═══════════════ -->
@@ -1577,11 +1590,13 @@ function renderHome(){
     ban.style.display='none';
   }
 
-  // Pending threat-wave entry (calendar): show when past days await repelling
+  // Pending threat-wave entry (calendar): show when past days await repelling.
+  // In debug mode, always surface it so the calendar (and its debug panel) is reachable.
   ensureWaveState(state);
   const pendCnt = pendingWaveDays(cm).length;
   const we = el('hWaveEntry');
   if(pendCnt > 0){ we.style.display='block'; el('hWaveCnt').textContent = pendCnt + '日分'; }
+  else if(isDebug()){ we.style.display='block'; el('hWaveCnt').textContent = '(DEBUG)'; }
   else we.style.display='none';
 
   const recent=[...cm.expenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
@@ -1767,6 +1782,8 @@ function renderWaves(){
   el('wvPending').textContent = pending.size>0 ? `未処理の撃退：${pending.size}日分` : 'すべて処理済み';
   el('wvPending').style.color = pending.size>0 ? 'var(--yellow)' : 'var(--green)';
 
+  el('wvDebug').style.display = isDebug() ? 'block' : 'none';
+
   // Monday-start weekday header offset for day 1
   const firstDow=(new Date(cm.year,cm.month-1,1).getDay()+6)%7;
   let cells='';
@@ -1841,6 +1858,48 @@ function showWaveReward(count, total, dropped){
   dn.style.animation='none'; void dn.offsetWidth; dn.style.animation='fltdmg 1.5s ease-out forwards';
   setTimeout(()=>{ ovl.className=''; dn.style.display='none'; go('waves'); },1500);
 }
+
+// ─── MINIGAME DEBUG MODE ──────────────────────────────────────
+// Debug mode surfaces a panel on the calendar to launch the invader minigame
+// on demand with an arbitrary threat count — no need to have real past-day
+// expenses to fight. It never touches save state (no HP/chip/processed changes).
+// Enable with a `debug` token in the URL (e.g. …/#debug) or via the console
+// helpers below (atoikuraDebug() persists a flag in localStorage).
+function isDebug(){
+  try{ return /(?:[?#&])debug\b/i.test(location.href) || localStorage.getItem('kakebo_debug')==='1'; }
+  catch(_){ return /debug/i.test(location.href); }
+}
+
+// Launch the minigame with a given threat count using the player's category
+// icons (or the defaults), reporting the kill ratio without altering any state.
+function debugRunMiniGame(n, onResult){
+  n = Math.max(1, Math.min(15, parseInt(n,10)||8));
+  const cats = (load()?.character?.categories) || CATS;
+  const icons = Array.from({length:n}, () => cats[Math.floor(Math.random()*cats.length)].icon);
+  startInvaderGame(icons, 'DEBUG テスト', (ratio) => {
+    if(onResult) onResult(ratio, n);
+  });
+}
+
+// Wired to the calendar debug panel's "テスト起動" button.
+function debugPlayWave(){
+  const inp = el('dbgCount');
+  const n = inp ? inp.value : 8;
+  const out = el('dbgResult');
+  if(out) out.textContent = '起動中…';
+  debugRunMiniGame(n, (ratio, count) => {
+    if(out) out.innerHTML = `結果：撃破率 <b style="color:var(--green);">${Math.round(ratio*100)}%</b>（${Math.round(ratio*count)}/${count}）`;
+  });
+}
+
+// Console helpers. debugMiniGame(n) launches directly from any screen;
+// atoikuraDebug(true|false) toggles the persisted debug flag and re-renders.
+window.debugMiniGame = (n) => debugRunMiniGame(n, (r,c) => console.log(`[atoikura debug] kill ratio ${(r*100).toFixed(0)}% (${Math.round(r*c)}/${c})`));
+window.atoikuraDebug = (on) => {
+  try{ if(on===false) localStorage.removeItem('kakebo_debug'); else localStorage.setItem('kakebo_debug','1'); }catch(_){}
+  const cur = document.querySelector('.scr.on');
+  go(cur && cur.id==='scr-waves' ? 'waves' : 'home');
+};
 
 // ─── INVADER MINIGAME ─────────────────────────────────────────
 // The batched "repel the threats" shooter. startInvaderGame(icons, label, onDone)
