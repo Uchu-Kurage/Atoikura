@@ -1655,11 +1655,14 @@ function settleThreat(state, amt, catId, memo, now){
 function waveYmd(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+function nextYmd(s){ const [y,m,d]=s.split('-').map(Number); const t=new Date(y,m-1,d); t.setDate(t.getDate()+1); return waveYmd(t); }
 
-// Detect an unprocessed batch of past-day threats to repel. Covers every
-// expense from the last reckoning (inclusive) up to yesterday (today excluded),
-// so a day's spending is fought the following day. Returns null when there is
-// nothing to fight; also advances lastWaveDate past empty spans.
+// Detect the next past day whose threats still need repelling. One day per wave:
+// the oldest unprocessed day with expenses (from the last reckoning up to
+// yesterday, today excluded) is returned, so a missed day is not merged with
+// others — it simply waits in the queue and can be fought on a later day. After
+// each wave, startWave advances lastWaveDate just past that day, so the rest
+// remain pending. Returns null when there is nothing to fight.
 function getPendingWave(state){
   const cm = state.currentMonth;
   if(!cm || !Array.isArray(cm.expenses)) return null;
@@ -1668,9 +1671,12 @@ function getPendingWave(state){
   // with a huge backlog of already-logged expenses on first upgrade.
   if(!cm.lastWaveDate){ cm.lastWaveDate = today; save(state); return null; }
   if(cm.lastWaveDate >= today) return null;
-  const exps = cm.expenses.filter(e => { const d = waveYmd(new Date(e.date)); return d >= cm.lastWaveDate && d < today; });
-  if(exps.length === 0){ cm.lastWaveDate = today; save(state); return null; }
-  return { expenses: exps };
+  const days = [...new Set(
+    cm.expenses.map(e => waveYmd(new Date(e.date))).filter(d => d >= cm.lastWaveDate && d < today)
+  )].sort();
+  if(days.length === 0){ cm.lastWaveDate = today; save(state); return null; }
+  const day = days[0];
+  return { day, expenses: cm.expenses.filter(e => waveYmd(new Date(e.date)) === day) };
 }
 
 // Run the batched repel for one pending wave, then continue the home gate.
@@ -1681,9 +1687,8 @@ function startWave(state, wave){
   const cm = state.currentMonth;
   const exps = wave.expenses;
   const total = exps.reduce((s,e)=>s+e.amount,0);
-  const spanDays = new Set(exps.map(e => waveYmd(new Date(e.date)))).size || 1;
   const daysInM = new Date(cm.year, cm.month, 0).getDate();
-  const withinBudget = total <= (cm.baseHp / daysInM) * spanDays;
+  const withinBudget = total <= cm.baseHp / daysInM;   // one day's spend vs. daily pace
 
   const finalize = (killRatio) => {
     let dropped = null;
@@ -1693,7 +1698,9 @@ function startWave(state, wave){
       const avail = DATA_CHIPS.filter(c => !state.inventory.unlockedChips.includes(c.id) && c.minLevel <= lvl);
       if(avail.length){ dropped = avail[Math.floor(Math.random()*avail.length)]; state.inventory.unlockedChips.push(dropped.id); }
     }
-    cm.lastWaveDate = waveYmd(new Date());
+    // Advance just past this day; any older missed days that remain are fought
+    // on the next home visit (getPendingWave re-chains through go('home')).
+    cm.lastWaveDate = nextYmd(wave.day);
     save(state);
     showWaveReward(exps.length, total, dropped);
   };
@@ -1701,8 +1708,8 @@ function startWave(state, wave){
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(state.character.minigameOn !== false && !reduceMotion){
     const icons = exps.map(e => getCat(state.character.categories, e.categoryId).icon);
-    const label = (() => { const d = new Date(exps[exps.length-1].date); return `${d.getMonth()+1}/${d.getDate()} の脅威`; })();
-    startInvaderGame(icons, label, finalize);
+    const [ , wm, wd] = wave.day.split('-').map(Number);
+    startInvaderGame(icons, `${wm}/${wd} の脅威`, finalize);
   } else {
     finalize(0); // no game: within-budget days still get the base 20% roll
   }
