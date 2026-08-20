@@ -206,6 +206,37 @@
     #mgResultTitle{font-family:var(--font-g);font-size:16px;color:var(--green);text-shadow:0 0 12px rgba(62,207,142,.5);line-height:1.5;}
     #mgResultSub{font-size:13px;color:var(--txt2);line-height:1.6;}
 
+    /* ── THREAT-WAVE CALENDAR ── */
+    .wvhead{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:6px;}
+    .wvhead span{text-align:center;font-size:10px;color:var(--txt3);font-weight:700;}
+    .wvgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+    .wvcell{position:relative;aspect-ratio:1;border-radius:8px;border:1px solid var(--border);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+      background:var(--card2);overflow:hidden;min-height:0;}
+    .wvcell .wvd{font-size:11px;font-weight:700;color:var(--txt2);}
+    .wvcell .wvsub{font-size:8px;color:var(--txt3);line-height:1;}
+    .wvcell .wvb{font-size:7px;color:var(--yellow);font-weight:700;}
+    .wvcell .wvchk{font-size:12px;color:var(--green);line-height:1;}
+    .wvcell .wvcnt{font-size:9px;color:var(--gold);font-weight:700;line-height:1;}
+    .wv-empty{background:transparent;border-color:transparent;}
+    .wv-none{opacity:.45;}
+    .wv-done{border-color:rgba(62,207,142,.4);background:rgba(62,207,142,.06);}
+    .wv-today{border-color:rgba(74,158,255,.5);background:rgba(74,158,255,.08);}
+    .wv-pend{border-color:var(--gold);background:rgba(255,215,0,.1);cursor:pointer;
+      box-shadow:0 0 12px rgba(255,215,0,.18);animation:pls 1.6s ease-in-out infinite;}
+    .wv-pend:active{transform:scale(.95);}
+    .wv-pend .wvd{color:var(--txt);}
+    .wvlegend{display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:14px;justify-content:center;
+      font-size:10px;color:var(--txt2);}
+    .wvlegend span{display:flex;align-items:center;gap:4px;}
+    .wvlegend .wl{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+      border-radius:4px;font-size:10px;font-style:normal;border:1px solid var(--border);}
+    .wl-pend{border-color:var(--gold);background:rgba(255,215,0,.1);}
+    .wl-done{border-color:rgba(62,207,142,.4);background:rgba(62,207,142,.06);color:var(--green);}
+    .wl-today{border-color:rgba(74,158,255,.5);background:rgba(74,158,255,.08);}
+    .wl-none{opacity:.45;}
+    @media (prefers-reduced-motion: reduce){ .wv-pend{animation:none;} }
+
     /* ── CHIP GRID ── */
     .chip-item{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border .2s;}
     .chip-item.unlocked{border-color:var(--gold);color:var(--gold);}
@@ -391,7 +422,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div>
         <p style="font-size:13px;font-weight:700;">🔫 撃退ミニゲーム</p>
-        <p style="font-size:11px;color:var(--txt2);margin-top:2px;">翌日に前日の脅威をまとめてインベーダーで迎撃。命中率が高いほどデータチップの発見率がUP（登録自体はいつでも即時）</p>
+        <p style="font-size:11px;color:var(--txt2);margin-top:2px;">撃退カレンダーで日を選ぶとインベーダー迎撃。命中率が高いほどデータチップの発見率がUP（OFFなら選択で即処理・ゲームなし）</p>
       </div>
       <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:pointer;">
         <input type="checkbox" id="minigameToggle" style="opacity:0;width:0;height:0;" onchange="updMinigameToggle()">
@@ -646,6 +677,12 @@
     <p style="font-size:10px;color:var(--txt3);margin-top:10px;line-height:1.5;">※固定費・臨時費はコアエネルギー（ゲーム）に影響しません。家計全体を把握するための参考値です。</p>
   </div>
 
+  <div id="hWaveEntry" style="display:none;margin-bottom:14px;">
+    <button class="btn" onclick="go('waves')" style="font-size:15px;padding:15px;background:linear-gradient(135deg,#f5c542,#d99b1e);color:#1a1405;box-shadow:0 0 20px rgba(245,197,66,.25);">
+      ⚔️ 未処理の撃退 <span id="hWaveCnt"></span> → カレンダー
+    </button>
+  </div>
+
   <div id="hDmgBtn" style="margin-bottom:14px;">
     <button class="btn btn-g" onclick="go('expense')" style="font-size:16px;padding:16px;">🔫 脅威を撃退する（支出）</button>
   </div>
@@ -712,6 +749,32 @@
 
     <div class="ebox" id="eErr" style="display:none;"></div>
     <button class="btn btn-g" onclick="submitExp()" id="eSubBtn" style="font-size:14px;">🔫 迎撃する（エネルギー消費確定）</button>
+  </div>
+</div>
+
+<!-- ═══════════════ THREAT-WAVE CALENDAR ═══════════════ -->
+<div class="scr" id="scr-waves">
+  <div class="flex g12 mb24" style="align-items:center;">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--txt2);font-size:26px;cursor:pointer;padding:4px;touch-action:manipulation;">←</button>
+    <div>
+      <p class="gtitle" style="font-size:8px;">今月あといくら使える？</p>
+      <h1 style="font-size:18px;font-weight:700;margin-top:4px;">⚔️ 撃退カレンダー</h1>
+    </div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:6px;">過去の日をタップすると、その日の脅威をまとめて迎撃できます。未処理はいつでも後日プレイOK。</p>
+    <p id="wvPending" style="font-size:13px;font-weight:700;margin-bottom:14px;"></p>
+    <div class="wvhead">
+      <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span>
+    </div>
+    <div class="wvgrid" id="wvGrid"></div>
+    <div class="wvlegend">
+      <span><i class="wl wl-pend">👾</i>未処理</span>
+      <span><i class="wl wl-done">✓</i>処理済み</span>
+      <span><i class="wl wl-today"></i>進行中</span>
+      <span><i class="wl wl-none"></i>支出なし</span>
+    </div>
   </div>
 </div>
 
@@ -1186,9 +1249,6 @@ function go(name){
       const mend = checkMonthEnd(s);
       if(mend){ showMonthEndModal(mend); return; }
 
-      const wave = getPendingWave(s);
-      if(wave){ startWave(s, wave); return; }
-
       const p=getPendingCp(s);
       if(p){showCpModal(s,p);return;}
     }
@@ -1210,6 +1270,7 @@ function go(name){
   else if(name==='history') { _histIdx=0; renderHist(); }
   else if(name==='expense') initExp();
   else if(name==='base') renderBase();
+  else if(name==='waves') renderWaves();
 }
 
 // ─── UTILS ───────────────────────────────────────────────────
@@ -1516,6 +1577,13 @@ function renderHome(){
     ban.style.display='none';
   }
 
+  // Pending threat-wave entry (calendar): show when past days await repelling
+  ensureWaveState(state);
+  const pendCnt = pendingWaveDays(cm).length;
+  const we = el('hWaveEntry');
+  if(pendCnt > 0){ we.style.display='block'; el('hWaveCnt').textContent = pendCnt + '日分'; }
+  else we.style.display='none';
+
   const recent=[...cm.expenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
   const rl=el('hRecList'),rt=el('hRecTtl'),emp=el('hEmpty');
   if(recent.length>0){
@@ -1621,8 +1689,8 @@ function submitExp(){
 
   // Registration is instant: record the threat and apply the HP damage right
   // away so "how much can I still spend" stays accurate. The repel minigame is
-  // batched to the next day (see getPendingWave / startWave), so expenses don't
-  // interrupt logging one by one.
+  // selected later from the threat-wave calendar (see playWaveDay), so expenses
+  // don't interrupt logging one by one.
   settleThreat(state, amt, eCatId, memo, now);
 }
 
@@ -1655,67 +1723,109 @@ function settleThreat(state, amt, catId, memo, now){
 function waveYmd(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-function nextYmd(s){ const [y,m,d]=s.split('-').map(Number); const t=new Date(y,m-1,d); t.setDate(t.getDate()+1); return waveYmd(t); }
-
-// Detect the next past day whose threats still need repelling. One day per wave:
-// the oldest unprocessed day with expenses (from the last reckoning up to
-// yesterday, today excluded) is returned, so a missed day is not merged with
-// others — it simply waits in the queue and can be fought on a later day. After
-// each wave, startWave advances lastWaveDate just past that day, so the rest
-// remain pending. Returns null when there is nothing to fight.
-function getPendingWave(state){
+// Ensure the per-day processed record exists. Migrates from the old single
+// `lastWaveDate` boundary: days before it were already reckoned, so mark them
+// processed; days from it up to yesterday stay selectable. New saves (no
+// boundary) anchor to today so past-only history isn't surfaced as a backlog.
+function ensureWaveState(state){
   const cm = state.currentMonth;
-  if(!cm || !Array.isArray(cm.expenses)) return null;
-  const today = waveYmd(new Date());
-  // Backfill for existing saves: anchor to today so we never ambush the player
-  // with a huge backlog of already-logged expenses on first upgrade.
-  if(!cm.lastWaveDate){ cm.lastWaveDate = today; save(state); return null; }
-  if(cm.lastWaveDate >= today) return null;
-  const days = [...new Set(
-    cm.expenses.map(e => waveYmd(new Date(e.date))).filter(d => d >= cm.lastWaveDate && d < today)
-  )].sort();
-  if(days.length === 0){ cm.lastWaveDate = today; save(state); return null; }
-  const day = days[0];
-  return { day, expenses: cm.expenses.filter(e => waveYmd(new Date(e.date)) === day) };
+  if(!cm || !Array.isArray(cm.expenses)) return;
+  if(!Array.isArray(cm.processedWaveDays)){
+    const boundary = cm.lastWaveDate || waveYmd(new Date());
+    cm.processedWaveDays = [...new Set(
+      cm.expenses.map(e => waveYmd(new Date(e.date))).filter(d => d < boundary)
+    )];
+    save(state);
+  }
 }
 
-// Run the batched repel for one pending wave, then continue the home gate.
-// The wave never changes money or HP (already applied at logging) — it only
-// rolls a data-chip reward, gated on staying within the daily budget pace and
-// scaled by how many threats you shoot down.
-function startWave(state, wave){
-  const cm = state.currentMonth;
-  const exps = wave.expenses;
-  const total = exps.reduce((s,e)=>s+e.amount,0);
-  const daysInM = new Date(cm.year, cm.month, 0).getDate();
-  const withinBudget = total <= cm.baseHp / daysInM;   // one day's spend vs. daily pace
+// Past days (today excluded — today is still accumulating) that have expenses
+// and have not been processed yet, oldest first. These are the selectable waves.
+function pendingWaveDays(cm){
+  const today = waveYmd(new Date());
+  const done = new Set(cm.processedWaveDays || []);
+  return [...new Set(
+    cm.expenses.map(e => waveYmd(new Date(e.date))).filter(d => d < today && !done.has(d))
+  )].sort();
+}
 
-  const finalize = (killRatio) => {
-    let dropped = null;
-    if(withinBudget && Math.random() < 0.20 + 0.30 * killRatio){
-      if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
-      const lvl = state.baseLevel || 1;
-      const avail = DATA_CHIPS.filter(c => !state.inventory.unlockedChips.includes(c.id) && c.minLevel <= lvl);
-      if(avail.length){ dropped = avail[Math.floor(Math.random()*avail.length)]; state.inventory.unlockedChips.push(dropped.id); }
+// ─── THREAT-WAVE CALENDAR ─────────────────────────────────────
+function renderWaves(){
+  const state=load();
+  if(!state||!state.currentMonth){ go('home'); return; }
+  ensureWaveState(state);
+  const cm=state.currentMonth;
+  const today=waveYmd(new Date());
+  const daysInM=new Date(cm.year,cm.month,0).getDate();
+  const done=new Set(cm.processedWaveDays||[]);
+  const pending=new Set(pendingWaveDays(cm));
+
+  // per-day sums/counts
+  const sum={}, cnt={};
+  cm.expenses.forEach(e=>{ const d=waveYmd(new Date(e.date)); sum[d]=(sum[d]||0)+e.amount; cnt[d]=(cnt[d]||0)+1; });
+
+  el('wvPending').textContent = pending.size>0 ? `未処理の撃退：${pending.size}日分` : 'すべて処理済み';
+  el('wvPending').style.color = pending.size>0 ? 'var(--yellow)' : 'var(--green)';
+
+  // Monday-start weekday header offset for day 1
+  const firstDow=(new Date(cm.year,cm.month-1,1).getDay()+6)%7;
+  let cells='';
+  for(let i=0;i<firstDow;i++) cells+='<div class="wvcell wv-empty"></div>';
+  for(let dnum=1;dnum<=daysInM;dnum++){
+    const ds=waveYmd(new Date(cm.year,cm.month-1,dnum));
+    const has=cnt[ds]>0;
+    const isToday=ds===today;
+    const isFuture=ds>today;
+    let cls='wvcell', badge='', sub='', onclick='';
+    if(isFuture){ cls+=' wv-empty'; }
+    else if(isToday){ cls+=' wv-today'; badge='<span class="wvb">進行中</span>'; if(has) sub=`<span class="wvsub">${cnt[ds]}件</span>`; }
+    else if(!has){ cls+=' wv-none'; }
+    else if(done.has(ds)){ cls+=' wv-done'; badge='<span class="wvchk">✓</span>'; sub=`<span class="wvsub">${Y(sum[ds])}</span>`; }
+    else { cls+=' wv-pend'; badge=`<span class="wvcnt">👾${cnt[ds]}</span>`; sub=`<span class="wvsub">${Y(sum[ds])}</span>`; onclick=`onclick="playWaveDay('${ds}')"`; }
+    cells+=`<div class="${cls}" ${onclick}><span class="wvd">${dnum}</span>${badge}${sub}</div>`;
+  }
+  el('wvGrid').innerHTML=cells;
+}
+
+// Play (or auto-resolve) the wave for one selected day, then return to the calendar.
+function playWaveDay(day){
+  const state=load();
+  if(!state||!state.currentMonth) return;
+  const cm=state.currentMonth;
+  ensureWaveState(state);
+  if((cm.processedWaveDays||[]).includes(day)) { renderWaves(); return; }
+  const exps=cm.expenses.filter(e=>waveYmd(new Date(e.date))===day);
+  if(exps.length===0){ cm.processedWaveDays.push(day); save(state); renderWaves(); return; }
+
+  const total=exps.reduce((s,e)=>s+e.amount,0);
+  const daysInM=new Date(cm.year,cm.month,0).getDate();
+  const withinBudget=total <= cm.baseHp/daysInM;   // that day's spend vs. daily pace
+
+  const finalize=(killRatio)=>{
+    let dropped=null;
+    if(withinBudget && Math.random() < 0.20 + 0.30*killRatio){
+      if(!state.inventory) state.inventory={materials:0,unlockedChips:[]};
+      const lvl=state.baseLevel||1;
+      const avail=DATA_CHIPS.filter(c=>!state.inventory.unlockedChips.includes(c.id)&&c.minLevel<=lvl);
+      if(avail.length){ dropped=avail[Math.floor(Math.random()*avail.length)]; state.inventory.unlockedChips.push(dropped.id); }
     }
-    // Advance just past this day; any older missed days that remain are fought
-    // on the next home visit (getPendingWave re-chains through go('home')).
-    cm.lastWaveDate = nextYmd(wave.day);
+    if(!Array.isArray(cm.processedWaveDays)) cm.processedWaveDays=[];
+    cm.processedWaveDays.push(day);
     save(state);
     showWaveReward(exps.length, total, dropped);
   };
 
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(state.character.minigameOn !== false && !reduceMotion){
-    const icons = exps.map(e => getCat(state.character.categories, e.categoryId).icon);
-    const [ , wm, wd] = wave.day.split('-').map(Number);
+  const reduceMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(state.character.minigameOn!==false && !reduceMotion){
+    const icons=exps.map(e=>getCat(state.character.categories,e.categoryId).icon);
+    const [ ,wm,wd]=day.split('-').map(Number);
     startInvaderGame(icons, `${wm}/${wd} の脅威`, finalize);
   } else {
-    finalize(0); // no game: within-budget days still get the base 20% roll
+    finalize(0);
   }
 }
 
-// Loot reveal after a wave, reusing the damage overlay, then resume the home gate.
+// Loot reveal after a wave, reusing the damage overlay, then back to the calendar.
 function showWaveReward(count, total, dropped){
   const ovl=el('dmgOvl'), dn=el('dmgNum');
   if(dropped){
@@ -1729,14 +1839,14 @@ function showWaveReward(count, total, dropped){
   }
   dn.style.display='block';
   dn.style.animation='none'; void dn.offsetWidth; dn.style.animation='fltdmg 1.5s ease-out forwards';
-  setTimeout(()=>{ ovl.className=''; dn.style.display='none'; go('home'); },1500);
+  setTimeout(()=>{ ovl.className=''; dn.style.display='none'; go('waves'); },1500);
 }
 
 // ─── INVADER MINIGAME ─────────────────────────────────────────
 // The batched "repel the threats" shooter. startInvaderGame(icons, label, onDone)
 // runs a ~7s canvas game with one invader per icon (each a logged expense, shown
 // with its category icon); onDone(killRatio) fires with the 0..1 share shot down.
-// Purely a reward flourish — see startWave for how the ratio is used.
+// Purely a reward flourish — see playWaveDay for how the ratio is used.
 let mgState = null;
 function mgFinish(){ if(mgState && mgState.finish) mgState.finish(); }
 
