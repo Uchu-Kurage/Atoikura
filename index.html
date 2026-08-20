@@ -391,7 +391,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div>
         <p style="font-size:13px;font-weight:700;">🔫 撃退ミニゲーム</p>
-        <p style="font-size:11px;color:var(--txt2);margin-top:2px;">支出登録時にインベーダー迎撃を挟みます。命中率が高いほどデータチップの発見率がUP</p>
+        <p style="font-size:11px;color:var(--txt2);margin-top:2px;">翌日に前日の脅威をまとめてインベーダーで迎撃。命中率が高いほどデータチップの発見率がUP（登録自体はいつでも即時）</p>
       </div>
       <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:pointer;">
         <input type="checkbox" id="minigameToggle" style="opacity:0;width:0;height:0;" onchange="updMinigameToggle()">
@@ -1185,7 +1185,10 @@ function go(name){
     if(s&&s.currentMonth){
       const mend = checkMonthEnd(s);
       if(mend){ showMonthEndModal(mend); return; }
-      
+
+      const wave = getPendingWave(s);
+      if(wave){ startWave(s, wave); return; }
+
       const p=getPendingCp(s);
       if(p){showCpModal(s,p);return;}
     }
@@ -1616,43 +1619,16 @@ function submitExp(){
     return;
   }
 
-  // Data-chip drop is gated on the weekly budget: the category must have a
-  // budget > 0, and this week's spend must stay within its weekly share.
-  const nowWk = getWeekStr(now);
-  const catExps = state.currentMonth.expenses.filter(e => e.categoryId === eCatId && getWeekStr(e.date) === nowWk);
-  const weeklySpent = catExps.reduce((s, e) => s + e.amount, 0) + amt;
-  const weeklyLimit = Math.floor((catDef.limit || 0) / 4);
-  const dropEligible = weeklyLimit > 0 && weeklySpent <= weeklyLimit;
-
-  // Play the invader minigame, then settle the threat. The kill ratio only
-  // boosts the chip-drop odds (pure upside over the old flat 20%) — it never
-  // changes the money or the HP damage, keeping the budget record honest.
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(state.character.minigameOn !== false && !reduceMotion){
-    startInvaderGame(amt, (killRatio) => {
-      const dropChance = 0.20 + 0.25 * killRatio;
-      settleThreat(state, amt, eCatId, memo, now, dropEligible && Math.random() < dropChance);
-    });
-  } else {
-    settleThreat(state, amt, eCatId, memo, now, dropEligible && Math.random() < 0.20);
-  }
+  // Registration is instant: record the threat and apply the HP damage right
+  // away so "how much can I still spend" stays accurate. The repel minigame is
+  // batched to the next day (see getPendingWave / startWave), so expenses don't
+  // interrupt logging one by one.
+  settleThreat(state, amt, eCatId, memo, now);
 }
 
-// Apply a repelled threat to the save and play the reveal animation.
-// dropWon is decided by the caller (eligibility × chance); when true a not-yet
-// unlocked data chip within the current base level is granted.
-function settleThreat(state, amt, catId, memo, now, dropWon){
-  let droppedChip = null;
-  if(dropWon){
-    if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
-    const currentBaseLevel = state.baseLevel || 1;
-    const available = DATA_CHIPS.filter(c => !state.inventory.unlockedChips.includes(c.id) && c.minLevel <= currentBaseLevel);
-    if (available.length > 0) {
-      droppedChip = available[Math.floor(Math.random() * available.length)];
-      state.inventory.unlockedChips.push(droppedChip.id);
-    }
-  }
-
+// Record a registered threat and play the damage reveal. No reward here — data
+// chips are earned in the next day's batched wave, not at logging time.
+function settleThreat(state, amt, catId, memo, now){
   state.currentMonth.expenses.push({id:uid(),amount:amt,categoryId:catId,memo,date:now});
   const newHp = state.currentMonth.currentHp - amt;
   state.currentMonth.currentHp=newHp;
@@ -1660,19 +1636,11 @@ function settleThreat(state, amt, catId, memo, now, dropWon){
   save(state);
   checkAchievements(state, true);
 
-  // Animation
   const ovl=el('dmgOvl');
   const dn=el('dmgNum');
-  if(droppedChip) {
-    ovl.className='lore';
-    dn.textContent='✨ データチップ発見！';
-    dn.className='loretext';
-  } else {
-    ovl.className='flash';
-    dn.innerHTML='💥 脅威撃退！<br><span style="font-size:12px;opacity:0.85;">−'+Y(amt)+' ｴﾈﾙｷﾞｰ消費</span>';
-    dn.className='';
-  }
-
+  ovl.className='flash';
+  dn.innerHTML='💥 脅威を記録<br><span style="font-size:12px;opacity:0.85;">−'+Y(amt)+' ｴﾈﾙｷﾞｰ消費</span>';
+  dn.className='';
   dn.style.display='block';
   dn.style.animation='none'; void dn.offsetWidth; dn.style.animation='fltdmg 1.5s ease-out forwards';
 
@@ -1681,15 +1649,91 @@ function settleThreat(state, amt, catId, memo, now, dropWon){
   },1500);
 }
 
+// ─── DAILY THREAT WAVE ────────────────────────────────────────
+// Local YYYY-MM-DD for an expense's stored date. Expenses are saved at local
+// noon, so reading local date parts never shifts the day across time zones.
+function waveYmd(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Detect an unprocessed batch of past-day threats to repel. Covers every
+// expense from the last reckoning (inclusive) up to yesterday (today excluded),
+// so a day's spending is fought the following day. Returns null when there is
+// nothing to fight; also advances lastWaveDate past empty spans.
+function getPendingWave(state){
+  const cm = state.currentMonth;
+  if(!cm || !Array.isArray(cm.expenses)) return null;
+  const today = waveYmd(new Date());
+  // Backfill for existing saves: anchor to today so we never ambush the player
+  // with a huge backlog of already-logged expenses on first upgrade.
+  if(!cm.lastWaveDate){ cm.lastWaveDate = today; save(state); return null; }
+  if(cm.lastWaveDate >= today) return null;
+  const exps = cm.expenses.filter(e => { const d = waveYmd(new Date(e.date)); return d >= cm.lastWaveDate && d < today; });
+  if(exps.length === 0){ cm.lastWaveDate = today; save(state); return null; }
+  return { expenses: exps };
+}
+
+// Run the batched repel for one pending wave, then continue the home gate.
+// The wave never changes money or HP (already applied at logging) — it only
+// rolls a data-chip reward, gated on staying within the daily budget pace and
+// scaled by how many threats you shoot down.
+function startWave(state, wave){
+  const cm = state.currentMonth;
+  const exps = wave.expenses;
+  const total = exps.reduce((s,e)=>s+e.amount,0);
+  const spanDays = new Set(exps.map(e => waveYmd(new Date(e.date)))).size || 1;
+  const daysInM = new Date(cm.year, cm.month, 0).getDate();
+  const withinBudget = total <= (cm.baseHp / daysInM) * spanDays;
+
+  const finalize = (killRatio) => {
+    let dropped = null;
+    if(withinBudget && Math.random() < 0.20 + 0.30 * killRatio){
+      if(!state.inventory) state.inventory = {materials:0, unlockedChips:[]};
+      const lvl = state.baseLevel || 1;
+      const avail = DATA_CHIPS.filter(c => !state.inventory.unlockedChips.includes(c.id) && c.minLevel <= lvl);
+      if(avail.length){ dropped = avail[Math.floor(Math.random()*avail.length)]; state.inventory.unlockedChips.push(dropped.id); }
+    }
+    cm.lastWaveDate = waveYmd(new Date());
+    save(state);
+    showWaveReward(exps.length, total, dropped);
+  };
+
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(state.character.minigameOn !== false && !reduceMotion){
+    const icons = exps.map(e => getCat(state.character.categories, e.categoryId).icon);
+    const label = (() => { const d = new Date(exps[exps.length-1].date); return `${d.getMonth()+1}/${d.getDate()} の脅威`; })();
+    startInvaderGame(icons, label, finalize);
+  } else {
+    finalize(0); // no game: within-budget days still get the base 20% roll
+  }
+}
+
+// Loot reveal after a wave, reusing the damage overlay, then resume the home gate.
+function showWaveReward(count, total, dropped){
+  const ovl=el('dmgOvl'), dn=el('dmgNum');
+  if(dropped){
+    ovl.className='lore';
+    dn.innerHTML='✨ データチップ発見！<br><span style="font-size:11px;opacity:0.85;">脅威 '+count+'件を処理</span>';
+    dn.className='loretext';
+  } else {
+    ovl.className='flash';
+    dn.innerHTML='🛡️ 脅威 '+count+'件を処理<br><span style="font-size:11px;opacity:0.85;">−'+Y(total)+'</span>';
+    dn.className='';
+  }
+  dn.style.display='block';
+  dn.style.animation='none'; void dn.offsetWidth; dn.style.animation='fltdmg 1.5s ease-out forwards';
+  setTimeout(()=>{ ovl.className=''; dn.style.display='none'; go('home'); },1500);
+}
+
 // ─── INVADER MINIGAME ─────────────────────────────────────────
-// A short "repel the threats" shooter shown when an expense is registered.
-// startInvaderGame(amt, onDone) runs a ~7s canvas game; onDone(killRatio)
-// fires with the 0..1 share of threats destroyed. Bigger expenses spawn more
-// threats. Purely a reward flourish — see settleThreat for how the ratio is used.
+// The batched "repel the threats" shooter. startInvaderGame(icons, label, onDone)
+// runs a ~7s canvas game with one invader per icon (each a logged expense, shown
+// with its category icon); onDone(killRatio) fires with the 0..1 share shot down.
+// Purely a reward flourish — see startWave for how the ratio is used.
 let mgState = null;
 function mgFinish(){ if(mgState && mgState.finish) mgState.finish(); }
 
-function startInvaderGame(amt, onDone){
+function startInvaderGame(icons, label, onDone){
   const wrap = el('miniGame');
   const canvas = el('mgCanvas');
   el('mgResult').classList.remove('on');
@@ -1703,8 +1747,11 @@ function startInvaderGame(amt, onDone){
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  // Build the threat formation; count scales with the expense size.
-  const total = Math.max(4, Math.min(15, 4 + Math.floor(amt / 1500)));
+  // Build the threat formation: one invader per logged expense (capped for
+  // playability), each drawn with its category icon.
+  el('mgLabel').textContent = '⚡ ' + (label || '迎撃モード');
+  const shown = icons.slice(0, 15);
+  const total = shown.length;
   const cols = Math.min(5, total);
   const rows = Math.ceil(total / cols);
   const gapX = W / (cols + 1);
@@ -1712,7 +1759,7 @@ function startInvaderGame(amt, onDone){
   const invaders = [];
   for(let r = 0, made = 0; r < rows; r++){
     for(let c = 0; c < cols && made < total; c++, made++){
-      invaders.push({ x: gapX * (c + 1), y: marginTop + r * rowH, alive: true });
+      invaders.push({ x: gapX * (c + 1), y: marginTop + r * rowH, alive: true, icon: shown[made] || '👾' });
     }
   }
   const turret = { x: W / 2, y: H - 22, w: 30 };
@@ -1720,7 +1767,7 @@ function startInvaderGame(amt, onDone){
   for(let i = 0; i < 26; i++) stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.2 + 0.3 });
   let dir = 1;
   const stepDown = 14;
-  const baseSpeed = 26 + amt / 4000;   // block sweep speed, nudged up by threat size
+  const baseSpeed = 28 + total * 1.5;   // more threats sweep a touch faster
   const fireEvery = 230;
   const DURATION = 7000;
   let lastFire = 0, lastTs = 0, elapsedMs = 0, killed = 0, ended = false;
@@ -1772,7 +1819,7 @@ function startInvaderGame(amt, onDone){
     // threats
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '24px serif';
-    invaders.forEach(i => { if(i.alive) ctx.fillText('👾', i.x, i.y); });
+    invaders.forEach(i => { if(i.alive) ctx.fillText(i.icon, i.x, i.y); });
     // lasers
     ctx.fillStyle = '#3ecf8e';
     bullets.forEach(b => ctx.fillRect(b.x - 1.5, b.y - 8, 3, 12));

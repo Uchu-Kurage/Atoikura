@@ -33,13 +33,14 @@ Everything is in the single `<script>` block at the bottom of `index.html` (star
 - **Screens (SPA):** Each view is a `<div class="scr" id="scr-<name>">`. Only one has the `on` class at a time. Navigation is `go(name)`, which hides all `.scr`, shows `#scr-<name>`, updates the bottom nav, and dispatches to the screen's render function (`renderHome`, `renderBase`, `renderHist`, `initExp`, `playMono`). Screens: `splash`, `mono` (opening monologue), `register`, `edit-budget`, `reference`, `share`, `mend` (month-end result), `cp` (weekly checkpoint), `home`, `expense`, `base`, `history`.
 - **State:** One JSON object persisted under `localStorage` key `SK = 'kakebo_quest_v1'`. Read/write via `load()` / `save(state)`. Shape:
   ```
-  { character:   { name, avatar, monthlyBudget, categories[], lifetimeSaved, fixedCosts[], carryover, unbudgetedAsTemp },
-    currentMonth:{ year, month, baseHp, currentHp, expenses[], tempExpenses[], checkpoints[], status },
+  { character:   { name, avatar, monthlyBudget, categories[], lifetimeSaved, fixedCosts[], carryover, unbudgetedAsTemp, minigameOn },
+    currentMonth:{ year, month, baseHp, currentHp, expenses[], tempExpenses[], checkpoints[], status, lastWaveDate },
     inventory:   { materials, unlockedChips[] },
     baseLevel,
     history:     [ …past currentMonth snapshots… ] }
   ```
-- **Game-loop gating happens inside `go('home')`:** before showing home it calls `checkMonthEnd(state)` (rolls the month over if the calendar month advanced, computing bonuses and pushing the old month to `history`) and `getPendingCp(state)` (detects an un-acknowledged past week). Either can redirect to the `mend` or `cp` result screen instead of home. This means month-rollover and checkpoint logic is **only** triggered by navigating home — not on a timer.
+- **Game-loop gating happens inside `go('home')`:** before showing home it calls `checkMonthEnd(state)` (rolls the month over if the calendar month advanced, computing bonuses and pushing the old month to `history`), then `getPendingWave(state)` (a past-day batch of threats to repel), then `getPendingCp(state)` (an un-acknowledged past week). Any of these can redirect to the `mend`/wave-minigame/`cp` flow instead of home, and each acknowledgement re-enters `go('home')` so they chain. This means month-rollover, the daily wave, and checkpoint logic are **only** triggered by navigating home — not on a timer.
+- **Daily threat wave (the expense minigame):** expense registration is instant (`settleThreat` records the threat and applies HP damage immediately, no reward). The invader minigame is **batched to the next day**: `getPendingWave` collects every expense from `currentMonth.lastWaveDate` (inclusive) up to yesterday (today excluded), and `startWave` plays one invader per expense (drawn with its category icon), then rolls a single data-chip reward — gated on the span's total staying within the daily budget pace (`baseHp / daysInMonth × spanDays`) and scaled by kill ratio (`0.20 + 0.30·ratio`). `lastWaveDate` advances to today after each reckoning; it is backfilled to today on first run so existing saves aren't ambushed by a backlog. When `character.minigameOn` is false (or `prefers-reduced-motion`), the wave auto-resolves with the base 20% roll and no game UI. The minigame never changes money or HP.
 
 ### Domain ↔ code vocabulary (needed to read the UI code)
 
