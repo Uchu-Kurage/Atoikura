@@ -277,12 +277,12 @@
 <!-- ═══════════════ INVADER MINIGAME ═══════════════ -->
 <div id="miniGame">
   <div id="mgHud">
-    <span id="mgLabel">⚡ 放出モード</span>
+    <span id="mgLabel">⚡ 撃退モード</span>
     <span id="mgTimer">0.0</span>
     <button id="mgSkip" type="button" onclick="mgFinish()">スキップ ▶</button>
   </div>
   <canvas id="mgCanvas"></canvas>
-  <p id="mgHint">スワイプで放出装置を動かし → エネルギーを放出！</p>
+  <p id="mgHint">スワイプで砲台を動かし → 脅威を撃退！</p>
   <div id="mgResult">
     <p id="mgResultTitle"></p>
     <p id="mgResultSub"></p>
@@ -439,8 +439,8 @@
   <div class="card" id="minigameCard" style="display:none;margin-top:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div>
-        <p style="font-size:13px;font-weight:700;">⚡ 放出ミニゲーム</p>
-        <p style="font-size:11px;color:var(--txt2);margin-top:2px;">放出タブのカレンダーで日を選ぶとエネルギー放出（インベーダー）。命中率が高いほど資材・データチップの獲得率がUP（OFFなら選択で即放出・ゲームなし）</p>
+        <p style="font-size:13px;font-weight:700;">🔫 撃退ミニゲーム</p>
+        <p style="font-size:11px;color:var(--txt2);margin-top:2px;">撃退タブのカレンダーで日を選ぶと脅威を撃退（インベーダー）。命中率が高いほど資材・データチップの獲得率がUP（OFFなら選択で即撃退・ゲームなし）</p>
       </div>
       <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:pointer;">
         <input type="checkbox" id="minigameToggle" style="opacity:0;width:0;height:0;" onchange="updMinigameToggle()">
@@ -697,7 +697,7 @@
 
   <div id="hWaveEntry" style="display:none;margin-bottom:14px;">
     <button class="btn" onclick="go('waves')" style="font-size:15px;padding:15px;background:linear-gradient(135deg,#f5c542,#d99b1e);color:#1a1405;box-shadow:0 0 20px rgba(245,197,66,.25);">
-      ⚡ 未放出のエネルギー <span id="hWaveCnt"></span> → 放出タブ
+      ⚔️ 未撃退の脅威 <span id="hWaveCnt"></span> → 撃退タブ
     </button>
   </div>
 
@@ -716,7 +716,7 @@
 
   <nav class="bnav">
     <button class="ni on" data-nav="home" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
-    <button class="ni" data-nav="waves" onclick="go('waves')"><span class="niic">🕹️</span><span class="nilb">放出</span></button>
+    <button class="ni" data-nav="waves" onclick="go('waves')"><span class="niic">🕹️</span><span class="nilb">撃退</span></button>
     <button class="ni" data-nav="expense" onclick="go('expense')" style="padding:0 8px;">
       <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">⚡</div>
     </button>
@@ -736,7 +736,7 @@
   </div>
 
   <div class="card" style="border-color:rgba(62,207,142,.3);">
-    <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.6;">⚠️ 支出を登録するとコアエネルギーを消費し、その分が翌日に放出できるエネルギーとしてチャージされます。</p>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:20px;line-height:1.6;">⚠️ 支出を登録するとコアエネルギーを消費し、その分が翌日の撃退で使えるエネルギーとしてチャージされます。</p>
 
     <label style="display:block;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:4px;">消費エネルギー（金額）</label>
     <div style="position:relative;margin-bottom:8px;">
@@ -771,55 +771,55 @@
   </div>
 </div>
 
-<!-- ═══════════════ ENERGY RELEASE (minigame tab) ═══════════════ -->
+<!-- ═══════════════ THREAT REPEL (minigame tab) ═══════════════ -->
 <div class="scr" id="scr-waves">
   <div class="fbet mb8">
-    <p class="gtitle">ENERGY RELEASE</p>
+    <p class="gtitle">THREAT REPEL</p>
     <div class="flex g8" style="align-items:center;">
       <span style="font-size:18px;">🔩</span>
       <span id="wvMat" style="font-size:14px;font-weight:700;color:var(--green);"></span>
     </div>
   </div>
-  <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">⚡ 放出カレンダー</h1>
+  <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">⚔️ 撃退カレンダー</h1>
 
   <div class="card">
-    <p style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:6px;">支出した日はエネルギーがチャージされます。過去の日をタップして、その日のエネルギーを放出しましょう。未放出はいつでも後日でOKです。</p>
+    <p style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:6px;">支出した日はエネルギーがチャージされます。過去の日をタップして、チャージしたエネルギーでその日の脅威を撃退しましょう。未撃退はいつでも後日でOKです。</p>
     <p id="wvPending" style="font-size:13px;font-weight:700;margin-bottom:14px;"></p>
     <div class="wvhead">
       <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span>
     </div>
     <div class="wvgrid" id="wvGrid"></div>
     <div class="wvlegend">
-      <span><i class="wl wl-pend">⚡</i>未放出</span>
-      <span><i class="wl wl-done">✓</i>放出済み</span>
+      <span><i class="wl wl-pend">👾</i>未撃退</span>
+      <span><i class="wl wl-done">✓</i>撃退済み</span>
       <span><i class="wl wl-today"></i>チャージ中</span>
       <span><i class="wl wl-none"></i>チャージなし</span>
     </div>
   </div>
 
   <div class="fbet mb12">
-    <p class="stitle" style="margin:0;">🔧 放出装置の改造</p>
-    <span style="font-size:11px;color:var(--txt2);">資材で放出を強化</span>
+    <p class="stitle" style="margin:0;">🔧 撃退装置の改造</p>
+    <span style="font-size:11px;color:var(--txt2);">資材で撃退を強化</span>
   </div>
-  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※資材（🔩）を使って放出ミニゲームの性能を強化します。節約した日ほど資材が貯まります。</p>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※資材（🔩）を使って撃退ミニゲームの性能を強化します。節約した日ほど資材が貯まります。</p>
   <div id="bGadgets" style="margin-bottom:24px;"></div>
 
   <div class="card" id="wvDebug" style="display:none;border-color:rgba(245,197,66,.4);">
     <p style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;">🐞 デバッグ：ミニゲーム</p>
     <div style="display:flex;gap:8px;align-items:flex-end;">
       <div style="flex:1;">
-        <label style="display:block;font-size:11px;color:var(--txt2);margin-bottom:4px;">エネルギー体の数（1〜15）</label>
+        <label style="display:block;font-size:11px;color:var(--txt2);margin-bottom:4px;">脅威の数（1〜15）</label>
         <input class="inp" type="number" id="dbgCount" value="8" min="1" max="15" inputmode="numeric" style="padding:10px 12px;font-size:15px;">
       </div>
       <button class="btn btn-s" onclick="debugPlayWave()" style="width:auto;padding:12px 16px;white-space:nowrap;">▶ テスト起動</button>
     </div>
     <p id="dbgResult" style="font-size:12px;color:var(--txt2);margin-top:10px;min-height:1.2em;"></p>
-    <p style="font-size:10px;color:var(--txt3);margin-top:6px;line-height:1.5;">※デバッグ起動はHP・データチップ・放出済み状態を一切変更しません。<code>#debug</code> をURLに付けるか、コンソールで <code>atoikuraDebug()</code> / <code>debugMiniGame(n)</code> を実行して有効化できます。</p>
+    <p style="font-size:10px;color:var(--txt3);margin-top:6px;line-height:1.5;">※デバッグ起動はHP・データチップ・撃退済み状態を一切変更しません。<code>#debug</code> をURLに付けるか、コンソールで <code>atoikuraDebug()</code> / <code>debugMiniGame(n)</code> を実行して有効化できます。</p>
   </div>
 
   <nav class="bnav">
     <button class="ni" data-nav="home" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
-    <button class="ni on" data-nav="waves" onclick="go('waves')"><span class="niic">🕹️</span><span class="nilb">放出</span></button>
+    <button class="ni on" data-nav="waves" onclick="go('waves')"><span class="niic">🕹️</span><span class="nilb">撃退</span></button>
     <button class="ni" data-nav="expense" onclick="go('expense')" style="padding:0 8px;">
       <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">⚡</div>
     </button>
@@ -837,7 +837,7 @@
       <span id="bMat" style="font-size:14px;font-weight:700;color:var(--green);"></span>
     </div>
   </div>
-  <p style="font-size:11px;color:var(--txt3);margin-bottom:24px;text-align:right;line-height:1.4;">※資材（🔩）は月末精算と、放出カレンダーで予算内の日を放出したときに獲得できます。改造は「放出」タブから。</p>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:24px;text-align:right;line-height:1.4;">※資材（🔩）は月末精算と、撃退カレンダーで予算内の日を撃退したときに獲得できます。改造は「撃退」タブから。</p>
   
   <div class="card tcen mb24" id="bMainCard" style="position:relative;overflow:hidden;">
     <div style="position:absolute;inset:0;background:rgba(28,28,36,0.7);z-index:0;pointer-events:none;" id="bMainOvl"></div>
@@ -859,12 +859,12 @@
     <p class="stitle" style="margin:0;">アーカイブ</p>
     <span id="bChipCnt" style="font-size:11px;color:var(--txt2);"></span>
   </div>
-  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※放出カレンダーで日を放出したとき、その日の支出が日割り予算に収まっているほど高確率でドロップします。</p>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※撃退カレンダーで日を撃退したとき、その日の支出が日割り予算に収まっているほど高確率でドロップします。</p>
   <div class="cgrid" id="bChips" style="grid-template-columns:repeat(2,1fr);"></div>
   
   <nav class="bnav">
     <button class="ni" data-nav="home" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
-    <button class="ni" data-nav="waves" onclick="go('waves')"><span class="niic">🕹️</span><span class="nilb">放出</span></button>
+    <button class="ni" data-nav="waves" onclick="go('waves')"><span class="niic">🕹️</span><span class="nilb">撃退</span></button>
     <button class="ni" data-nav="expense" onclick="go('expense')" style="padding:0 8px;">
       <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">⚡</div>
     </button>
@@ -963,7 +963,7 @@
 
   <nav class="bnav">
     <button class="ni" data-nav="home" onclick="go('home')"><span class="niic">🗡️</span><span class="nilb">HUD</span></button>
-    <button class="ni" data-nav="waves" onclick="go('waves')"><span class="niic">🕹️</span><span class="nilb">放出</span></button>
+    <button class="ni" data-nav="waves" onclick="go('waves')"><span class="niic">🕹️</span><span class="nilb">撃退</span></button>
     <button class="ni" data-nav="expense" onclick="go('expense')" style="padding:0 8px;">
       <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">⚡</div>
     </button>
@@ -1079,7 +1079,7 @@ const GADGETS = [
   { id:'beam',   name:'広域ビーム',   icon:'🎯', max:3, costs:[300,700,1500],
     eff:'当たり判定 +25%/Lv' },
   { id:'slow',   name:'減速フィールド', icon:'🌀', max:2, costs:[400,1000],
-    eff:'エネルギー体 −18%/Lv・制限時間 +1.2s/Lv' },
+    eff:'脅威 −18%/Lv・制限時間 +1.2s/Lv' },
 ];
 
 // Resolve the active minigame modifiers from the saved gadget levels.
@@ -1841,7 +1841,7 @@ function renderWaves(){
   const sum={}, cnt={};
   cm.expenses.forEach(e=>{ const d=waveYmd(new Date(e.date)); sum[d]=(sum[d]||0)+e.amount; cnt[d]=(cnt[d]||0)+1; });
 
-  el('wvPending').textContent = pending.size>0 ? `未放出のエネルギー：${pending.size}日分` : 'すべて放出済み';
+  el('wvPending').textContent = pending.size>0 ? `未撃退の脅威：${pending.size}日分` : 'すべて撃退済み';
   el('wvPending').style.color = pending.size>0 ? 'var(--yellow)' : 'var(--green)';
 
   if(!state.gadgets){ state.gadgets = { fire:0, spread:0, beam:0, slow:0 }; save(state); }
@@ -1863,7 +1863,7 @@ function renderWaves(){
     else if(isToday){ cls+=' wv-today'; badge='<span class="wvb">進行中</span>'; if(has) sub=`<span class="wvsub">${cnt[ds]}件</span>`; }
     else if(!has){ cls+=' wv-none'; }
     else if(done.has(ds)){ cls+=' wv-done'; badge='<span class="wvchk">✓</span>'; sub=`<span class="wvsub">${Y(sum[ds])}</span>`; }
-    else { cls+=' wv-pend'; badge=`<span class="wvcnt">⚡${cnt[ds]}</span>`; sub=`<span class="wvsub">${Y(sum[ds])}</span>`; onclick=`onclick="playWaveDay('${ds}')"`; }
+    else { cls+=' wv-pend'; badge=`<span class="wvcnt">👾${cnt[ds]}</span>`; sub=`<span class="wvsub">${Y(sum[ds])}</span>`; onclick=`onclick="playWaveDay('${ds}')"`; }
     cells+=`<div class="${cls}" ${onclick}><span class="wvd">${dnum}</span>${badge}${sub}</div>`;
   }
   el('wvGrid').innerHTML=cells;
@@ -1908,7 +1908,7 @@ function playWaveDay(day){
   if(state.character.minigameOn!==false && !reduceMotion){
     const icons=exps.map(e=>getCat(state.character.categories,e.categoryId).icon);
     const [ ,wm,wd]=day.split('-').map(Number);
-    startInvaderGame(icons, `${wm}/${wd} のエネルギー`, finalize, r);
+    startInvaderGame(icons, `${wm}/${wd} の脅威`, finalize, r);
   } else {
     finalize(0);
   }
@@ -1920,11 +1920,11 @@ function showWaveReward(count, total, dropped, mats){
   const matLine = mats>0 ? ' ・ <span style="color:var(--green);">🔩+'+mats+'</span>' : '';
   if(dropped){
     ovl.className='lore';
-    dn.innerHTML='✨ データチップ発見！<br><span style="font-size:11px;opacity:0.85;">エネルギー '+count+'件を放出'+matLine+'</span>';
+    dn.innerHTML='✨ データチップ発見！<br><span style="font-size:11px;opacity:0.85;">脅威 '+count+'件を撃退'+matLine+'</span>';
     dn.className='loretext';
   } else {
     ovl.className='flash';
-    dn.innerHTML='⚡ エネルギー '+count+'件を放出<br><span style="font-size:11px;opacity:0.85;">−'+Y(total)+matLine+'</span>';
+    dn.innerHTML='🛡️ 脅威 '+count+'件を撃退<br><span style="font-size:11px;opacity:0.85;">−'+Y(total)+matLine+'</span>';
     dn.className='';
   }
   dn.style.display='block';
@@ -2001,7 +2001,7 @@ function startInvaderGame(icons, label, onDone, ratio){
 
   // Build the threat formation: one invader per logged expense (capped for
   // playability), each drawn with its category icon.
-  el('mgLabel').textContent = '⚡ ' + (label || '放出モード');
+  el('mgLabel').textContent = '⚡ ' + (label || '撃退モード');
   const shown = icons.slice(0, 15);
   const total = shown.length;
   const cols = Math.min(5, total);
@@ -2011,7 +2011,7 @@ function startInvaderGame(icons, label, onDone, ratio){
   const invaders = [];
   for(let r = 0, made = 0; r < rows; r++){
     for(let c = 0; c < cols && made < total; c++, made++){
-      invaders.push({ x: gapX * (c + 1), y: marginTop + r * rowH, alive: true, icon: shown[made] || '⚡' });
+      invaders.push({ x: gapX * (c + 1), y: marginTop + r * rowH, alive: true, icon: shown[made] || '👾' });
     }
   }
   const turret = { x: W / 2, y: H - 22, w: 30 };
@@ -2123,13 +2123,13 @@ function startInvaderGame(icons, label, onDone, ratio){
     const ratio = total ? killed / total : 1;
 
     let title, color;
-    if(ratio >= 1){ title = 'PERFECT RELEASE!'; color = 'var(--gold)'; }
-    else if(ratio >= 0.7){ title = '放出成功！'; color = 'var(--green)'; }
-    else if(ratio >= 0.3){ title = '放出完了'; color = 'var(--green)'; }
-    else { title = '放出不足…'; color = 'var(--yellow)'; }
+    if(ratio >= 1){ title = 'PERFECT DEFENSE!'; color = 'var(--gold)'; }
+    else if(ratio >= 0.7){ title = '撃退成功！'; color = 'var(--green)'; }
+    else if(ratio >= 0.3){ title = '撃退完了'; color = 'var(--green)'; }
+    else { title = '撃退不足…'; color = 'var(--yellow)'; }
     const rt = el('mgResultTitle'), rs = el('mgResultSub');
     rt.textContent = title; rt.style.color = color;
-    rs.innerHTML = `エネルギー ${killed} / ${total} を放出` + (ratio >= 0.7 ? '<br><span style="color:var(--gold);">✨ 放出ボーナス</span>' : '');
+    rs.innerHTML = `脅威 ${killed} / ${total} を撃退` + (ratio >= 0.7 ? '<br><span style="color:var(--gold);">✨ 撃退ボーナス</span>' : '');
     el('mgResult').classList.add('on');
 
     setTimeout(() => {
