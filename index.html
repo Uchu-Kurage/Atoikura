@@ -278,7 +278,7 @@
 <div id="miniGame">
   <div id="mgHud">
     <span id="mgLabel">⚡ 撃退モード</span>
-    <span id="mgTimer">0.0</span>
+    <span id="mgTimer">👾×0</span>
     <button id="mgSkip" type="button" onclick="mgFinish()">スキップ ▶</button>
   </div>
   <canvas id="mgCanvas"></canvas>
@@ -1079,7 +1079,7 @@ const GADGETS = [
   { id:'beam',   name:'広域ビーム',   icon:'🎯', max:3, costs:[300,700,1500],
     eff:'当たり判定 +25%/Lv' },
   { id:'slow',   name:'減速フィールド', icon:'🌀', max:2, costs:[400,1000],
-    eff:'脅威 −18%/Lv・制限時間 +1.2s/Lv' },
+    eff:'脅威の侵攻を減速 −18%/Lv（撃退しやすく）' },
 ];
 
 // Resolve the active minigame modifiers from the saved gadget levels.
@@ -1090,8 +1090,7 @@ function getGadgetEffects(state){
     fireEvery: Math.max(120, Math.round(230 * Math.pow(0.75, fire))), // ⚡ faster auto-fire
     shots: 1 + spread,                                                // 🔱 bullets per volley
     hitR: 16 + beam * 4,                                              // 🎯 collision half-size
-    speedMul: Math.max(0.4, 1 - slow * 0.18),                        // 🌀 slower invaders
-    timeBonus: slow * 1200,                                           // 🌀 longer timer (ms)
+    speedMul: Math.max(0.4, 1 - slow * 0.18),                        // 🌀 slower invaders (more room to clear)
   };
 }
 
@@ -1976,8 +1975,10 @@ window.atoikuraDebug = (on) => {
 
 // ─── INVADER MINIGAME ─────────────────────────────────────────
 // The batched "repel the threats" shooter. startInvaderGame(icons, label, onDone)
-// runs a ~7s canvas game with one invader per icon (each a logged expense, shown
-// with its category icon); onDone(killRatio) fires with the 0..1 share shot down.
+// runs a canvas game with one invader per icon (each a logged expense, shown with
+// its category icon). No time limit: it clears when every threat is destroyed, or
+// ends if the block breaches the turret line; onDone(killRatio) fires with the
+// 0..1 share shot down.
 // Purely a reward flourish — see playWaveDay for how the ratio is used.
 let mgState = null;
 function mgFinish(){ if(mgState && mgState.finish) mgState.finish(); }
@@ -2023,8 +2024,7 @@ function startInvaderGame(icons, label, onDone, ratio){
   // (thematic: a bigger overspend is a bigger threat); the 🌀 slow gadget damps it.
   const baseSpeed = (24 + Math.min(rr0, 3) * 16) * fx.speedMul;
   const fireEvery = fx.fireEvery;          // ⚡ 連射装置
-  const DURATION = 7000 + fx.timeBonus;    // 🌀 減速フィールド extends the timer
-  let lastFire = 0, lastTs = 0, elapsedMs = 0, killed = 0, ended = false;
+  let lastFire = 0, lastTs = 0, killed = 0, ended = false;
 
   const moveTo = (clientX) => {
     const rr = canvas.getBoundingClientRect();
@@ -2104,13 +2104,13 @@ function startInvaderGame(icons, label, onDone, ratio){
   function frame(ts){
     const dt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0;
     lastTs = ts;
-    elapsedMs += dt * 1000;
     update(dt, ts);
     if(ended) return;
     draw();
-    const remain = Math.max(0, DURATION - elapsedMs);
-    el('mgTimer').textContent = (remain / 1000).toFixed(1);
-    if(remain <= 0 || invaders.every(i => !i.alive)){ finish(); return; }
+    // No time limit: clear when every threat is destroyed (a breach ends it in update()).
+    const aliveCount = invaders.reduce((n, i) => n + (i.alive ? 1 : 0), 0);
+    el('mgTimer').textContent = '👾×' + aliveCount;
+    if(aliveCount === 0){ finish(); return; }
     mgState.raf = requestAnimationFrame(frame);
   }
 
