@@ -254,6 +254,8 @@
     .gitem .gbtn:active{background:var(--brite);}
     .gitem .gbtn:disabled{opacity:.45;pointer-events:none;}
     .gitem .gbtn.max{color:var(--gold);border-color:rgba(255,215,0,.4);background:rgba(255,215,0,.08);}
+    .gitem.glocked{opacity:.55;}
+    .gitem.glocked .glv{color:var(--txt3);}
 
     /* ── CHIP GRID ── */
     .chip-item{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:border .2s;}
@@ -720,7 +722,7 @@
     <button class="ni" data-nav="expense" onclick="go('expense')" style="padding:0 8px;">
       <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">⚡</div>
     </button>
-    <button class="ni" data-nav="base" onclick="go('base')"><span class="niic">🚪</span><span class="nilb">部屋</span></button>
+    <button class="ni" data-nav="base" onclick="go('base')"><span class="niic">🏠</span><span class="nilb">拠点</span></button>
     <button class="ni" data-nav="history" onclick="go('history')"><span class="niic">📊</span><span class="nilb">戦績</span></button>
   </nav>
 </div>
@@ -797,13 +799,6 @@
     </div>
   </div>
 
-  <div class="fbet mb12">
-    <p class="stitle" style="margin:0;">🔧 撃退装置の改造</p>
-    <span style="font-size:11px;color:var(--txt2);">資材で撃退を強化</span>
-  </div>
-  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※資材（🔩）を使って撃退ミニゲームの性能を強化します。節約した日ほど資材が貯まります。</p>
-  <div id="bGadgets" style="margin-bottom:24px;"></div>
-
   <div class="card" id="wvDebug" style="display:none;border-color:rgba(245,197,66,.4);">
     <p style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;">🐞 デバッグ：ミニゲーム</p>
     <div style="display:flex;gap:8px;align-items:flex-end;">
@@ -823,7 +818,7 @@
     <button class="ni" data-nav="expense" onclick="go('expense')" style="padding:0 8px;">
       <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">⚡</div>
     </button>
-    <button class="ni" data-nav="base" onclick="go('base')"><span class="niic">🚪</span><span class="nilb">部屋</span></button>
+    <button class="ni" data-nav="base" onclick="go('base')"><span class="niic">🏠</span><span class="nilb">拠点</span></button>
     <button class="ni" data-nav="history" onclick="go('history')"><span class="niic">📊</span><span class="nilb">戦績</span></button>
   </nav>
 </div>
@@ -831,13 +826,13 @@
 <!-- ═══════════════ BASE / ARCHIVES ═══════════════ -->
 <div class="scr" id="scr-base">
   <div class="fbet mb8">
-    <p class="gtitle">MY ROOM</p>
+    <p class="gtitle">MY BASE</p>
     <div class="flex g8" style="align-items:center;">
       <span style="font-size:18px;">🔩</span>
       <span id="bMat" style="font-size:14px;font-weight:700;color:var(--green);"></span>
     </div>
   </div>
-  <p style="font-size:11px;color:var(--txt3);margin-bottom:24px;text-align:right;line-height:1.4;">※資材（🔩）は月末精算と、撃退カレンダーで予算内の日を撃退したときに獲得できます。改造は「撃退」タブから。</p>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:24px;text-align:right;line-height:1.4;">※資材（🔩）は月末精算と、撃退カレンダーで予算内の日を撃退したときに獲得できます。</p>
   
   <div class="card tcen mb24" id="bMainCard" style="position:relative;overflow:hidden;">
     <div style="position:absolute;inset:0;background:rgba(28,28,36,0.7);z-index:0;pointer-events:none;" id="bMainOvl"></div>
@@ -854,7 +849,14 @@
       <p id="bMaxMsg" style="display:none;font-size:14px;color:var(--gold);font-weight:700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.5);">MAX LEVEL REACHED</p>
     </div>
   </div>
-  
+
+  <div class="fbet mb12">
+    <p class="stitle" style="margin:0;">🔧 撃退装置の改造</p>
+    <span style="font-size:11px;color:var(--txt2);">資材で撃退を強化</span>
+  </div>
+  <p style="font-size:11px;color:var(--txt3);margin-bottom:12px;">※資材（🔩）で撃退ミニゲームを強化。拠点レベルを上げると改造できる範囲が広がります。</p>
+  <div id="bGadgets" style="margin-bottom:24px;"></div>
+
   <div class="fbet mb12">
     <p class="stitle" style="margin:0;">アーカイブ</p>
     <span id="bChipCnt" style="font-size:11px;color:var(--txt2);"></span>
@@ -868,7 +870,7 @@
     <button class="ni" data-nav="expense" onclick="go('expense')" style="padding:0 8px;">
       <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">⚡</div>
     </button>
-    <button class="ni on" data-nav="base" onclick="go('base')"><span class="niic">🚪</span><span class="nilb">部屋</span></button>
+    <button class="ni on" data-nav="base" onclick="go('base')"><span class="niic">🏠</span><span class="nilb">拠点</span></button>
     <button class="ni" data-nav="history" onclick="go('history')"><span class="niic">📊</span><span class="nilb">戦績</span></button>
   </nav>
 </div>
@@ -967,7 +969,7 @@
     <button class="ni" data-nav="expense" onclick="go('expense')" style="padding:0 8px;">
       <div style="width:52px;height:52px;background:linear-gradient(135deg,#3ecf8e,#2aaa70);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(62,207,142,.5);border:2px solid rgba(255,255,255,.1);">⚡</div>
     </button>
-    <button class="ni" data-nav="base" onclick="go('base')"><span class="niic">🚪</span><span class="nilb">部屋</span></button>
+    <button class="ni" data-nav="base" onclick="go('base')"><span class="niic">🏠</span><span class="nilb">拠点</span></button>
     <button class="ni on" data-nav="history" onclick="go('history')"><span class="niic">📊</span><span class="nilb">戦績</span></button>
   </nav>
 </div>
@@ -1071,14 +1073,16 @@ const BASE_LEVELS = [
 // `lv` (0 = unowned) indexes into costs[] for the NEXT level's price; effects
 // are read from the level in getGadgetEffects(). Saving (frugal wave days) is
 // what earns the materials, so the upgrade loop rewards spending less.
+// `min` is the base (拠点) level required to unlock the gadget — raising the base
+// grade widens the range of mods available.
 const GADGETS = [
-  { id:'fire',   name:'連射装置',     icon:'⚡', max:3, costs:[300,800,1800],
+  { id:'fire',   name:'連射装置',     icon:'⚡', max:3, min:1, costs:[300,800,1800],
     eff:'連射間隔 −25%/Lv（弾がたくさん出る）' },
-  { id:'spread', name:'拡散ショット', icon:'🔱', max:2, costs:[500,1400],
-    eff:'ビームが Lv+1 方向に分裂' },
-  { id:'beam',   name:'広域ビーム',   icon:'🎯', max:3, costs:[300,700,1500],
+  { id:'beam',   name:'広域ビーム',   icon:'🎯', max:3, min:2, costs:[300,700,1500],
     eff:'当たり判定 +25%/Lv' },
-  { id:'slow',   name:'減速フィールド', icon:'🌀', max:2, costs:[400,1000],
+  { id:'spread', name:'拡散ショット', icon:'🔱', max:2, min:3, costs:[500,1400],
+    eff:'ビームが Lv+1 方向に分裂' },
+  { id:'slow',   name:'減速フィールド', icon:'🌀', max:2, min:4, costs:[400,1000],
     eff:'脅威の侵攻を減速 −18%/Lv（撃退しやすく）' },
 ];
 
@@ -1843,9 +1847,7 @@ function renderWaves(){
   el('wvPending').textContent = pending.size>0 ? `未撃退の脅威：${pending.size}日分` : 'すべて撃退済み';
   el('wvPending').style.color = pending.size>0 ? 'var(--yellow)' : 'var(--green)';
 
-  if(!state.gadgets){ state.gadgets = { fire:0, spread:0, beam:0, slow:0 }; save(state); }
   el('wvMat').textContent = (state.inventory && state.inventory.materials) || 0;
-  renderGadgets(state);
   el('wvDebug').style.display = isDebug() ? 'block' : 'none';
 
   // Monday-start weekday header offset for day 1
@@ -2172,7 +2174,9 @@ function renderBase() {
   bCard.style.backgroundSize = 'cover';
   bCard.style.backgroundPosition = 'center';
   
+  if(!state.gadgets){ state.gadgets = { fire:0, spread:0, beam:0, slow:0 }; save(state); }
   el('bMat').textContent = state.inventory.materials;
+  renderGadgets(state);
   el('bIco').textContent = curBase.icon;
   el('bName').textContent = `Lv.${curBase.level} ${curBase.name}`;
   el('bDesc').textContent = curBase.desc;
@@ -2228,24 +2232,28 @@ function upgradeBase() {
   }
 }
 
-// Render the gadget-mod list on the base screen (level pips + next-cost button).
+// Render the gadget-mod list on the base screen. Each gadget unlocks at its
+// required base (拠点) level (g.min); below it the row is shown locked.
 function renderGadgets(state){
   const box = el('bGadgets'); if(!box) return;
   if(!state.gadgets) state.gadgets = { fire:0, spread:0, beam:0, slow:0 };
   const mats = (state.inventory && state.inventory.materials) || 0;
+  const blv = state.baseLevel || 1;
   box.innerHTML = GADGETS.map(g => {
     const lv = state.gadgets[g.id]|0;
+    const locked = blv < (g.min || 1);
     const atMax = lv >= g.max;
     const cost = atMax ? null : g.costs[lv];
     const pips = Array.from({length:g.max}, (_,i)=>`<span class="gpip ${i<lv?'on':''}"></span>`).join('');
     let btn;
-    if(atMax) btn = `<button class="gbtn max" disabled>MAX</button>`;
+    if(locked) btn = `<button class="gbtn" disabled>🔒 拠点<br>Lv.${g.min}</button>`;
+    else if(atMax) btn = `<button class="gbtn max" disabled>MAX</button>`;
     else if(mats >= cost) btn = `<button class="gbtn" onclick="upgradeGadget('${g.id}')">🔩${cost}<br>で強化</button>`;
     else btn = `<button class="gbtn" disabled>🔩${cost}<br>不足</button>`;
-    return `<div class="gitem">
+    return `<div class="gitem${locked ? ' glocked' : ''}">
       <div class="gico">${g.icon}</div>
       <div class="ginf">
-        <div class="gnm">${g.name} <span class="glv">Lv.${lv}/${g.max}</span></div>
+        <div class="gnm">${g.name} <span class="glv">${locked ? '拠点Lv.'+g.min+'で解放' : 'Lv.'+lv+'/'+g.max}</span></div>
         <div class="gds">${g.eff}</div>
         <div class="gpips">${pips}</div>
       </div>
@@ -2258,6 +2266,7 @@ function upgradeGadget(id){
   const state = load(); if(!state) return;
   if(!state.gadgets) state.gadgets = { fire:0, spread:0, beam:0, slow:0 };
   const g = GADGETS.find(x => x.id === id); if(!g) return;
+  if((state.baseLevel || 1) < (g.min || 1)) return;   // locked until base level reached
   const lv = state.gadgets[id]|0;
   if(lv >= g.max) return;
   const cost = g.costs[lv];
