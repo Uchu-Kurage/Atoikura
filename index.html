@@ -278,7 +278,7 @@
 <div id="miniGame">
   <div id="mgHud">
     <span id="mgLabel">⚡ 撃退モード</span>
-    <span id="mgTimer">0.0</span>
+    <span id="mgTimer">👾×0</span>
     <button id="mgSkip" type="button" onclick="mgFinish()">スキップ ▶</button>
   </div>
   <canvas id="mgCanvas"></canvas>
@@ -783,7 +783,7 @@
   <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">⚔️ 撃退カレンダー</h1>
 
   <div class="card">
-    <p style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:6px;">支出した日はエネルギーがチャージされます。過去の日をタップして、チャージしたエネルギーでその日の脅威を撃退しましょう。未撃退はいつでも後日でOKです。</p>
+    <p style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:6px;">支出した日はエネルギーがチャージされます。過去の日をタップして、チャージしたエネルギーでその日の脅威を撃退しましょう。脅威に砲台まで突破されるとその日の報酬は得られません。未撃退はいつでも後日でOKです。</p>
     <p id="wvPending" style="font-size:13px;font-weight:700;margin-bottom:14px;"></p>
     <div class="wvhead">
       <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span>
@@ -1079,7 +1079,7 @@ const GADGETS = [
   { id:'beam',   name:'広域ビーム',   icon:'🎯', max:3, costs:[300,700,1500],
     eff:'当たり判定 +25%/Lv' },
   { id:'slow',   name:'減速フィールド', icon:'🌀', max:2, costs:[400,1000],
-    eff:'脅威 −18%/Lv・制限時間 +1.2s/Lv' },
+    eff:'脅威の侵攻を減速 −18%/Lv（撃退しやすく）' },
 ];
 
 // Resolve the active minigame modifiers from the saved gadget levels.
@@ -1090,8 +1090,7 @@ function getGadgetEffects(state){
     fireEvery: Math.max(120, Math.round(230 * Math.pow(0.75, fire))), // ⚡ faster auto-fire
     shots: 1 + spread,                                                // 🔱 bullets per volley
     hitR: 16 + beam * 4,                                              // 🎯 collision half-size
-    speedMul: Math.max(0.4, 1 - slow * 0.18),                        // 🌀 slower invaders
-    timeBonus: slow * 1200,                                           // 🌀 longer timer (ms)
+    speedMul: Math.max(0.4, 1 - slow * 0.18),                        // 🌀 slower invaders (more room to clear)
   };
 }
 
@@ -1886,22 +1885,25 @@ function playWaveDay(day){
   // Frugality (savings) sets the reward ceiling: r≤0.5→1.0, r=1.0→0.5, r≥1.5→0.
   const frugality=Math.max(0, Math.min(1, 1.5 - r));
 
-  const finalize=(killRatio)=>{
-    // Frugality gates every reward (multiplicative), so skill can never rescue an
-    // overspending day; kill ratio only multiplies within the frugality ceiling.
-    let dropped=null;
-    if(Math.random() < 0.5 * frugality * (0.5 + 0.5*killRatio)){
-      if(!state.inventory) state.inventory={materials:0,unlockedChips:[]};
-      const lvl=state.baseLevel||1;
-      const avail=DATA_CHIPS.filter(c=>!state.inventory.unlockedChips.includes(c.id)&&c.minLevel<=lvl);
-      if(avail.length){ dropped=avail[Math.floor(Math.random()*avail.length)]; state.inventory.unlockedChips.push(dropped.id); }
+  const finalize=(killRatio, breached)=>{
+    // Breaching the turret line (threats reached the bottom) forfeits the whole
+    // reward. Otherwise frugality gates every reward (multiplicative), so skill
+    // can never rescue an overspending day; kill ratio only multiplies within it.
+    let dropped=null, mats=0;
+    if(!breached){
+      if(Math.random() < 0.5 * frugality * (0.5 + 0.5*killRatio)){
+        if(!state.inventory) state.inventory={materials:0,unlockedChips:[]};
+        const lvl=state.baseLevel||1;
+        const avail=DATA_CHIPS.filter(c=>!state.inventory.unlockedChips.includes(c.id)&&c.minLevel<=lvl);
+        if(avail.length){ dropped=avail[Math.floor(Math.random()*avail.length)]; state.inventory.unlockedChips.push(dropped.id); }
+      }
+      mats=Math.round(40 * frugality * (0.4 + 0.6*killRatio));
+      if(mats>0){ if(!state.inventory) state.inventory={materials:0,unlockedChips:[]}; state.inventory.materials += mats; }
     }
-    const mats=Math.round(40 * frugality * (0.4 + 0.6*killRatio));
-    if(mats>0){ if(!state.inventory) state.inventory={materials:0,unlockedChips:[]}; state.inventory.materials += mats; }
     if(!Array.isArray(cm.processedWaveDays)) cm.processedWaveDays=[];
     cm.processedWaveDays.push(day);
     save(state);
-    showWaveReward(exps.length, total, dropped, mats);
+    showWaveReward(exps.length, total, dropped, mats, breached);
   };
 
   const reduceMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1915,10 +1917,14 @@ function playWaveDay(day){
 }
 
 // Loot reveal after a wave, reusing the damage overlay, then back to the calendar.
-function showWaveReward(count, total, dropped, mats){
+function showWaveReward(count, total, dropped, mats, breached){
   const ovl=el('dmgOvl'), dn=el('dmgNum');
   const matLine = mats>0 ? ' ・ <span style="color:var(--green);">🔩+'+mats+'</span>' : '';
-  if(dropped){
+  if(breached){
+    ovl.className='flash';
+    dn.innerHTML='💥 突破された…<br><span style="font-size:11px;opacity:0.85;">報酬なし</span>';
+    dn.className='';
+  } else if(dropped){
     ovl.className='lore';
     dn.innerHTML='✨ データチップ発見！<br><span style="font-size:11px;opacity:0.85;">脅威 '+count+'件を撃退'+matLine+'</span>';
     dn.className='loretext';
@@ -1976,8 +1982,10 @@ window.atoikuraDebug = (on) => {
 
 // ─── INVADER MINIGAME ─────────────────────────────────────────
 // The batched "repel the threats" shooter. startInvaderGame(icons, label, onDone)
-// runs a ~7s canvas game with one invader per icon (each a logged expense, shown
-// with its category icon); onDone(killRatio) fires with the 0..1 share shot down.
+// runs a canvas game with one invader per icon (each a logged expense, shown with
+// its category icon). No time limit: it clears when every threat is destroyed, or
+// ends if the block breaches the turret line; onDone(killRatio) fires with the
+// 0..1 share shot down.
 // Purely a reward flourish — see playWaveDay for how the ratio is used.
 let mgState = null;
 function mgFinish(){ if(mgState && mgState.finish) mgState.finish(); }
@@ -2023,8 +2031,7 @@ function startInvaderGame(icons, label, onDone, ratio){
   // (thematic: a bigger overspend is a bigger threat); the 🌀 slow gadget damps it.
   const baseSpeed = (24 + Math.min(rr0, 3) * 16) * fx.speedMul;
   const fireEvery = fx.fireEvery;          // ⚡ 連射装置
-  const DURATION = 7000 + fx.timeBonus;    // 🌀 減速フィールド extends the timer
-  let lastFire = 0, lastTs = 0, elapsedMs = 0, killed = 0, ended = false;
+  let lastFire = 0, lastTs = 0, killed = 0, ended = false;
 
   const moveTo = (clientX) => {
     const rr = canvas.getBoundingClientRect();
@@ -2048,7 +2055,7 @@ function startInvaderGame(icons, label, onDone, ratio){
       }
     }
     invaders.forEach(i => { if(i.alive) maxY = Math.max(maxY, i.y); });
-    if(maxY >= turret.y - 24){ finish(); return; }  // threats broke through
+    if(maxY >= turret.y - 24){ finish(true); return; }  // threats broke through → fail, no reward
 
     if(ts - lastFire > fireEvery){
       // 🔱 拡散ショット: fire fx.shots bullets fanned out around vertical.
@@ -2104,17 +2111,17 @@ function startInvaderGame(icons, label, onDone, ratio){
   function frame(ts){
     const dt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0;
     lastTs = ts;
-    elapsedMs += dt * 1000;
     update(dt, ts);
     if(ended) return;
     draw();
-    const remain = Math.max(0, DURATION - elapsedMs);
-    el('mgTimer').textContent = (remain / 1000).toFixed(1);
-    if(remain <= 0 || invaders.every(i => !i.alive)){ finish(); return; }
+    // No time limit: clear when every threat is destroyed (a breach ends it in update()).
+    const aliveCount = invaders.reduce((n, i) => n + (i.alive ? 1 : 0), 0);
+    el('mgTimer').textContent = '👾×' + aliveCount;
+    if(aliveCount === 0){ finish(false); return; }
     mgState.raf = requestAnimationFrame(frame);
   }
 
-  function finish(){
+  function finish(breached){
     if(ended) return;
     ended = true;
     cancelAnimationFrame(mgState.raf);
@@ -2122,21 +2129,27 @@ function startInvaderGame(icons, label, onDone, ratio){
     canvas.removeEventListener('pointerdown', onPtr);
     const ratio = total ? killed / total : 1;
 
-    let title, color;
-    if(ratio >= 1){ title = 'PERFECT DEFENSE!'; color = 'var(--gold)'; }
-    else if(ratio >= 0.7){ title = '撃退成功！'; color = 'var(--green)'; }
-    else if(ratio >= 0.3){ title = '撃退完了'; color = 'var(--green)'; }
-    else { title = '撃退不足…'; color = 'var(--yellow)'; }
     const rt = el('mgResultTitle'), rs = el('mgResultSub');
-    rt.textContent = title; rt.style.color = color;
-    rs.innerHTML = `脅威 ${killed} / ${total} を撃退` + (ratio >= 0.7 ? '<br><span style="color:var(--gold);">✨ 撃退ボーナス</span>' : '');
+    if(breached){
+      // Threats reached the turret line → mission failed, no reward.
+      rt.textContent = '💀 突破された…'; rt.style.color = 'var(--red)';
+      rs.innerHTML = `脅威 ${killed} / ${total} を撃退<br><span style="color:var(--red);">報酬なし</span>`;
+    } else {
+      let title, color;
+      if(ratio >= 1){ title = 'PERFECT DEFENSE!'; color = 'var(--gold)'; }
+      else if(ratio >= 0.7){ title = '撃退成功！'; color = 'var(--green)'; }
+      else if(ratio >= 0.3){ title = '撃退完了'; color = 'var(--green)'; }
+      else { title = '撃退不足…'; color = 'var(--yellow)'; }
+      rt.textContent = title; rt.style.color = color;
+      rs.innerHTML = `脅威 ${killed} / ${total} を撃退` + (ratio >= 0.7 ? '<br><span style="color:var(--gold);">✨ 撃退ボーナス</span>' : '');
+    }
     el('mgResult').classList.add('on');
 
     setTimeout(() => {
       wrap.classList.remove('on');
       el('mgResult').classList.remove('on');
       mgState = null;
-      onDone(ratio);
+      onDone(ratio, !!breached);
     }, 1300);
   }
 
