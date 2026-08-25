@@ -1091,7 +1091,7 @@ function getGadgetEffects(state){
   const g = (state && state.gadgets) || {};
   const fire = g.fire|0, spread = g.spread|0, beam = g.beam|0, slow = g.slow|0;
   return {
-    fireEvery: Math.max(120, Math.round(230 * Math.pow(0.75, fire))), // ⚡ faster auto-fire
+    fireEvery: Math.max(110, Math.round(280 * Math.pow(0.75, fire))), // ⚡ faster auto-fire
     shots: 1 + spread,                                                // 🔱 bullets per volley
     hitR: 16 + beam * 4,                                              // 🎯 collision half-size
     speedMul: Math.max(0.4, 1 - slow * 0.18),                        // 🌀 slower invaders (more room to clear)
@@ -2028,10 +2028,13 @@ function startInvaderGame(icons, label, onDone, ratio){
   const bullets = [], booms = [], stars = [];
   for(let i = 0; i < 26; i++) stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.2 + 0.3 });
   let dir = 1;
-  const stepDown = 14;
+  const stepDown = 10;                      // small nudge on each wall bounce
   // Difficulty scales with how far the day's spend exceeded the budget pace
-  // (thematic: a bigger overspend is a bigger threat); the 🌀 slow gadget damps it.
-  const baseSpeed = (24 + Math.min(rr0, 3) * 16) * fx.speedMul;
+  // (thematic: a bigger overspend is a bigger threat); the 🌀 slow gadget damps both.
+  const baseSpeed = (40 + Math.min(rr0, 3) * 22) * fx.speedMul;   // horizontal sweep
+  // Constant downward creep, sized to the board height so pacing is consistent
+  // across devices: roughly a passive breach in ~10s (faster on overspend days).
+  const descentRate = H * (0.06 + Math.min(rr0, 3) * 0.02) * fx.speedMul;
   const fireEvery = fx.fireEvery;          // ⚡ 連射装置
   let lastFire = 0, lastTs = 0, killed = 0, ended = false;
 
@@ -2044,17 +2047,20 @@ function startInvaderGame(icons, label, onDone, ratio){
   canvas.addEventListener('pointerdown', onPtr, { passive: false });
 
   function update(dt, ts){
-    // Sweep the block; reverse and drop a row at the walls.
+    // Sweep the block; reverse and drop a row at the walls, plus a constant
+    // downward creep so the block always advances toward the turret line —
+    // clear fast or get breached.
     let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
     invaders.forEach(i => { if(i.alive){ minX = Math.min(minX, i.x); maxX = Math.max(maxX, i.x); } });
     if(minX !== Infinity){
-      const shift = dir * (baseSpeed + killed * 4) * dt;
+      const shift = dir * (baseSpeed + killed * 7) * dt;
       if(maxX + shift > W - invHalf || minX + shift < invHalf){
         dir *= -1;
         invaders.forEach(i => i.y += stepDown);
       } else {
         invaders.forEach(i => i.x += shift);
       }
+      invaders.forEach(i => i.y += descentRate * dt);   // continuous descent
     }
     invaders.forEach(i => { if(i.alive) maxY = Math.max(maxY, i.y); });
     if(maxY >= turret.y - 24){ finish(true); return; }  // threats broke through → fail, no reward
