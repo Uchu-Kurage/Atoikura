@@ -778,6 +778,7 @@
   <div class="fbet mb8">
     <p class="gtitle">THREAT REPEL</p>
     <div class="flex g8" style="align-items:center;">
+      <span class="gtitle" style="color:var(--gold);">STAGE <span id="wvStage">1</span></span>
       <span style="font-size:18px;">🔩</span>
       <span id="wvMat" style="font-size:14px;font-weight:700;color:var(--green);"></span>
     </div>
@@ -785,7 +786,7 @@
   <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">⚔️ 撃退カレンダー</h1>
 
   <div class="card">
-    <p style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:6px;">支出した日はエネルギーがチャージされます。過去の日をタップして、チャージしたエネルギーでその日の脅威を撃退しましょう。脅威に砲台まで突破されるとその日の報酬は得られません。未撃退はいつでも後日でOKです。</p>
+    <p style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:6px;">支出した日はエネルギーがチャージされます。過去の日をタップして、チャージしたエネルギーでその日の脅威を撃退しましょう。脅威に砲台まで突破されるとその日の報酬は得られません。撃退に成功するとステージが1つ進み、次の撃退はより手強くなります（資材ボーナスも少し増加）。未撃退はいつでも後日でOKです。</p>
     <p id="wvPending" style="font-size:13px;font-weight:700;margin-bottom:14px;"></p>
     <div class="wvhead">
       <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span>
@@ -1808,6 +1809,10 @@ function waveYmd(d){
 // processed; days from it up to yesterday stay selectable. New saves (no
 // boundary) anchor to today so past-only history isn't surfaced as a backlog.
 function ensureWaveState(state){
+  // Persistent stage counter (lifetime): each cleared wave day advances it by 1,
+  // so the next day you repel is fought at a harder stage. Backfilled defensively
+  // for saves from before the stage system existed.
+  if(typeof state.waveStage !== 'number' || state.waveStage < 1){ state.waveStage = 1; save(state); }
   const cm = state.currentMonth;
   if(!cm || !Array.isArray(cm.expenses)) return;
   if(!Array.isArray(cm.processedWaveDays)){
@@ -1848,6 +1853,7 @@ function renderWaves(){
   el('wvPending').style.color = pending.size>0 ? 'var(--yellow)' : 'var(--green)';
 
   el('wvMat').textContent = (state.inventory && state.inventory.materials) || 0;
+  el('wvStage').textContent = state.waveStage || 1;
   el('wvDebug').style.display = isDebug() ? 'block' : 'none';
 
   // Monday-start weekday header offset for day 1
@@ -1886,12 +1892,17 @@ function playWaveDay(day){
   const r=pace>0 ? total/pace : 1;                     // that day's spend vs. pace
   // Frugality (savings) sets the reward ceiling: r≤0.5→1.0, r=1.0→0.5, r≥1.5→0.
   const frugality=Math.max(0, Math.min(1, 1.5 - r));
+  const stage=state.waveStage||1;                      // current stage (harder = higher)
 
   const finalize=(killRatio, breached)=>{
     // Breaching the turret line (threats reached the bottom) forfeits the whole
     // reward. Otherwise frugality gates every reward (multiplicative), so skill
     // can never rescue an overspending day; kill ratio only multiplies within it.
+    // A modest stage bonus multiplies the (already frugality-gated) materials, so
+    // pushing deeper into the stages pays off without breaking the savings gate.
     let dropped=null, mats=0;
+    const advanced=!breached;                          // clearing a day advances the stage
+    const stageBonus=1 + Math.min(stage-1, 20)*0.03;   // +3%/stage on materials, capped
     if(!breached){
       if(Math.random() < 0.5 * frugality * (0.5 + 0.5*killRatio)){
         if(!state.inventory) state.inventory={materials:0,unlockedChips:[]};
@@ -1899,40 +1910,45 @@ function playWaveDay(day){
         const avail=DATA_CHIPS.filter(c=>!state.inventory.unlockedChips.includes(c.id)&&c.minLevel<=lvl);
         if(avail.length){ dropped=avail[Math.floor(Math.random()*avail.length)]; state.inventory.unlockedChips.push(dropped.id); }
       }
-      mats=Math.round(40 * frugality * (0.4 + 0.6*killRatio));
+      mats=Math.round(40 * frugality * (0.4 + 0.6*killRatio) * stageBonus);
       if(mats>0){ if(!state.inventory) state.inventory={materials:0,unlockedChips:[]}; state.inventory.materials += mats; }
     }
     if(!Array.isArray(cm.processedWaveDays)) cm.processedWaveDays=[];
     cm.processedWaveDays.push(day);
+    if(advanced) state.waveStage=stage+1;              // next repelled day is one stage harder
     save(state);
-    showWaveReward(exps.length, total, dropped, mats, breached);
+    showWaveReward(exps.length, total, dropped, mats, breached, stage, advanced);
   };
 
   const reduceMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(state.character.minigameOn!==false && !reduceMotion){
     const icons=exps.map(e=>getCat(state.character.categories,e.categoryId).icon);
     const [ ,wm,wd]=day.split('-').map(Number);
-    startInvaderGame(icons, `${wm}/${wd} の脅威`, finalize, r);
+    startInvaderGame(icons, `${wm}/${wd} の脅威`, finalize, r, stage);
   } else {
     finalize(0);
   }
 }
 
 // Loot reveal after a wave, reusing the damage overlay, then back to the calendar.
-function showWaveReward(count, total, dropped, mats, breached){
+function showWaveReward(count, total, dropped, mats, breached, stage, advanced){
   const ovl=el('dmgOvl'), dn=el('dmgNum');
   const matLine = mats>0 ? ' ・ <span style="color:var(--green);">🔩+'+mats+'</span>' : '';
+  // Stage line: a clear advances to the next stage; a breach holds the current one.
+  const stageLine = advanced
+    ? '<br><span style="font-size:10px;color:var(--gold);">STAGE '+stage+' クリア → STAGE '+(stage+1)+'へ</span>'
+    : '<br><span style="font-size:10px;color:var(--red);">STAGE '+stage+' 突破される（ステージ据え置き）</span>';
   if(breached){
     ovl.className='flash';
-    dn.innerHTML='💥 突破された…<br><span style="font-size:11px;opacity:0.85;">報酬なし</span>';
+    dn.innerHTML='💥 突破された…<br><span style="font-size:11px;opacity:0.85;">報酬なし</span>'+stageLine;
     dn.className='';
   } else if(dropped){
     ovl.className='lore';
-    dn.innerHTML='✨ データチップ発見！<br><span style="font-size:11px;opacity:0.85;">脅威 '+count+'件を撃退'+matLine+'</span>';
+    dn.innerHTML='✨ データチップ発見！<br><span style="font-size:11px;opacity:0.85;">脅威 '+count+'件を撃退'+matLine+'</span>'+stageLine;
     dn.className='loretext';
   } else {
     ovl.className='flash';
-    dn.innerHTML='🛡️ 脅威 '+count+'件を撃退<br><span style="font-size:11px;opacity:0.85;">−'+Y(total)+matLine+'</span>';
+    dn.innerHTML='🛡️ 脅威 '+count+'件を撃退<br><span style="font-size:11px;opacity:0.85;">−'+Y(total)+matLine+'</span>'+stageLine;
     dn.className='';
   }
   dn.style.display='block';
@@ -1957,9 +1973,10 @@ function debugRunMiniGame(n, onResult){
   n = Math.max(1, Math.min(15, parseInt(n,10)||8));
   const cats = (load()?.character?.categories) || CATS;
   const icons = Array.from({length:n}, () => cats[Math.floor(Math.random()*cats.length)].icon);
+  const stage = (load()?.waveStage) || 1;   // preview at the current stage's difficulty (no state change)
   startInvaderGame(icons, 'DEBUG テスト', (ratio) => {
     if(onResult) onResult(ratio, n);
-  });
+  }, 1, stage);
 }
 
 // Wired to the calendar debug panel's "テスト起動" button.
@@ -1992,7 +2009,7 @@ window.atoikuraDebug = (on) => {
 let mgState = null;
 function mgFinish(){ if(mgState && mgState.finish) mgState.finish(); }
 
-function startInvaderGame(icons, label, onDone, ratio){
+function startInvaderGame(icons, label, onDone, ratio, stage){
   const wrap = el('miniGame');
   const canvas = el('mgCanvas');
   el('mgResult').classList.remove('on');
@@ -2000,6 +2017,8 @@ function startInvaderGame(icons, label, onDone, ratio){
 
   const fx = getGadgetEffects(load());   // active gadget mods
   const rr0 = (ratio && ratio > 0) ? ratio : 1;   // spend-vs-pace: bigger overspend → harder
+  const stg = Math.max(1, stage|0 || 1);
+  const stageMul = Math.min(2.2, 1 + (stg - 1) * 0.06);   // each stage sweeps/descends a bit faster
 
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const box = canvas.getBoundingClientRect();
@@ -2011,7 +2030,7 @@ function startInvaderGame(icons, label, onDone, ratio){
 
   // Build the threat formation: one invader per logged expense (capped for
   // playability), each drawn with its category icon.
-  el('mgLabel').textContent = '⚡ ' + (label || '撃退モード');
+  el('mgLabel').textContent = 'STAGE ' + stg + ' ・ ' + (label || '撃退モード');
   const shown = icons.slice(0, 15);
   const total = shown.length;
   const cols = Math.min(5, total);
@@ -2031,10 +2050,12 @@ function startInvaderGame(icons, label, onDone, ratio){
   const stepDown = 10;                      // small nudge on each wall bounce
   // Difficulty scales with how far the day's spend exceeded the budget pace
   // (thematic: a bigger overspend is a bigger threat); the 🌀 slow gadget damps both.
-  const baseSpeed = (40 + Math.min(rr0, 3) * 22) * fx.speedMul;   // horizontal sweep
+  // Stage stacks on top of the overspend ratio: deeper stages sweep and descend
+  // faster, so a cleared day always hands you a slightly harder next stage.
+  const baseSpeed = (40 + Math.min(rr0, 3) * 22) * fx.speedMul * stageMul;   // horizontal sweep
   // Constant downward creep, sized to the board height so pacing is consistent
   // across devices: roughly a passive breach in ~10s (faster on overspend days).
-  const descentRate = H * (0.06 + Math.min(rr0, 3) * 0.02) * fx.speedMul;
+  const descentRate = H * (0.06 + Math.min(rr0, 3) * 0.02) * fx.speedMul * stageMul;
   const fireEvery = fx.fireEvery;          // ⚡ 連射装置
   let lastFire = 0, lastTs = 0, killed = 0, ended = false;
 
